@@ -21,3 +21,4 @@ Contributors:
   Rui Barreiros, ftdidmx plugin
   Sean Sill, various fixes.
   Tobi Schäfer, for the MacPort files
+  Lukas Erlinghagen, worked on the Windows/MinGW port (GSoC 2014)
