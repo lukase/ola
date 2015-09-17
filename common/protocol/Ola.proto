@@ -196,6 +196,11 @@ message PluginStateReply {
   repeated PluginInfo conflicts_with = 5;
 }
 
+message PluginStateChangeRequest {
+  required int32 plugin_id = 1;
+  required bool enabled = 2;
+}
+
 // request info on a device
 message DeviceInfoRequest {
   optional int32 plugin_id = 1;
@@ -266,6 +271,8 @@ message UniverseInfo {
   required int32 input_port_count = 4;
   required int32 output_port_count = 5;
   required int32 rdm_devices = 6;
+  repeated PortInfo input_ports = 7;
+  repeated PortInfo output_ports = 8;
 }
 
 message UniverseInfoReply {
@@ -279,8 +286,6 @@ message PortPriorityRequest {
   required int32 priority_mode = 4;
   optional int32 priority = 5;
 }
-
-
 
 // a device config request
 message DeviceConfigRequest {
@@ -314,6 +319,13 @@ message UIDListReply {
   repeated UID uid = 2;
 }
 
+message RDMRequestOverrideOptions {
+  optional uint32 sub_start_code = 1;
+  optional uint32 message_length = 2;
+  optional uint32 message_count = 3;
+  optional uint32 checksum = 4;
+}
+
 message RDMRequest {
   required int32 universe = 1;
   required UID uid = 2;
@@ -322,6 +334,7 @@ message RDMRequest {
   required bytes data = 5; // 0 - 231 bytes
   required bool is_set = 6;
   optional bool include_raw_response = 7 [default = false];
+  optional RDMRequestOverrideOptions options = 8;
 }
 
 message RDMDiscoveryRequest {
@@ -331,6 +344,19 @@ message RDMDiscoveryRequest {
   required int32 param_id = 4;
   required bytes data = 5; // 0 - 231 bytes
   optional bool include_raw_response = 6 [default = false];
+  optional RDMRequestOverrideOptions options = 8;
+}
+
+message RDMFrameTiming {
+  optional int32 response_delay = 1;
+  optional int32 break_time = 2;
+  optional int32 mark_time = 3;
+  optional int32 data_time = 4;
+}
+
+message RDMFrame {
+  optional bytes raw_response = 1;
+  optional RDMFrameTiming timing = 2;
 }
 
 message RDMResponse {
@@ -346,7 +372,8 @@ message RDMResponse {
   optional RDMCommandClass command_class = 6; // the command class
   optional uint32 param_id = 5;  // the param id, required for queued messages
   optional bytes data = 4 [default = ""]; // 0 - 231 bytes
-  repeated bytes raw_response = 8;
+  repeated bytes raw_response = 8;  // deprecated
+  repeated RDMFrame raw_frame = 12;
 }
 
 
@@ -379,6 +406,7 @@ service OlaServerService {
   rpc GetDeviceInfo (DeviceInfoRequest) returns (DeviceInfoReply);
   rpc GetCandidatePorts (OptionalUniverseRequest) returns (DeviceInfoReply);
   rpc ConfigureDevice (DeviceConfigRequest) returns (DeviceConfigReply);
+  rpc SetPluginState (PluginStateChangeRequest) returns (Ack);
   rpc SetPortPriority (PortPriorityRequest) returns (Ack);
   rpc GetUniverseInfo (OptionalUniverseRequest) returns (UniverseInfoReply);
   rpc SetUniverseName (UniverseNameRequest) returns (Ack);

@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * ArtnetPort.h
+ * ArtNetPort.h
  * The ArtNet plugin for ola
  * Copyright (C) 2005 Simon Newton
  */
@@ -82,7 +82,7 @@ class ArtNetOutputPort: public BasicOutputPort {
   /*
    * Handle an RDMRequest
    */
-  void SendRDMRequest(const ola::rdm::RDMRequest *request,
+  void SendRDMRequest(ola::rdm::RDMRequest *request,
                       ola::rdm::RDMCallback *on_complete);
 
   /*

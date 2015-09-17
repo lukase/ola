@@ -297,7 +297,7 @@ const string HTTPRequest::GetHeader(const string &key) const {
 const string HTTPRequest::GetParameter(const string &key) const {
   const char *value = MHD_lookup_connection_value(m_connection,
                                                   MHD_GET_ARGUMENT_KIND,
-                                                  key.data());
+                                                  key.c_str());
   if (value)
     return string(value);
   else
@@ -312,7 +312,7 @@ const string HTTPRequest::GetParameter(const string &key) const {
 bool HTTPRequest::CheckParameterExists(const string &key) const {
   const char *value = MHD_lookup_connection_value(m_connection,
                                                   MHD_GET_ARGUMENT_KIND,
-                                                  key.data());
+                                                  key.c_str());
   if (value != NULL) {
     return true;
   } else {
@@ -425,6 +425,11 @@ HTTPServer::HTTPServer(const HTTPServerOptions &options)
       m_default_handler(NULL),
       m_port(options.port),
       m_data_dir(options.data_dir) {
+  ola::io::SelectServer::Options ss_options;
+  // See issue #761. epoll/kqueue can't be used with the current
+  // implementation.
+  ss_options.force_select = true;
+  m_select_server.reset(new ola::io::SelectServer(ss_options));
 }
 
 
@@ -471,8 +476,9 @@ bool HTTPServer::Init() {
                              NULL,
                              MHD_OPTION_END);
 
-  if (m_httpd)
-    m_select_server.RunInLoop(NewCallback(this, &HTTPServer::UpdateSockets));
+  if (m_httpd) {
+    m_select_server->RunInLoop(NewCallback(this, &HTTPServer::UpdateSockets));
+  }
 
   return m_httpd ? true : false;
 }
@@ -492,12 +498,12 @@ void *HTTPServer::Run() {
 #ifdef _WIN32
   // set a short poll interval since we'd block too long otherwise.
   // TODO(Lukas) investigate why the poller does not wake up on HTTP requests.
-  m_select_server.SetDefaultInterval(TimeInterval(1, 0));
+  m_select_server->SetDefaultInterval(TimeInterval(1, 0));
 #else
   // set a long poll interval so we don't spin
-  m_select_server.SetDefaultInterval(TimeInterval(60, 0));
+  m_select_server->SetDefaultInterval(TimeInterval(60, 0));
 #endif
-  m_select_server.Run();
+  m_select_server->Run();
 
   // clean up any remaining sockets
   SocketSet::iterator iter = m_sockets.begin();
@@ -515,7 +521,7 @@ void *HTTPServer::Run() {
 void HTTPServer::Stop() {
   if (IsRunning()) {
     OLA_INFO << "Notifying HTTP server thread to stop";
-    m_select_server.Terminate();
+    m_select_server->Terminate();
     OLA_INFO << "Waiting for HTTP server thread to exit";
     Join();
     OLA_INFO << "HTTP server thread exited";
@@ -564,18 +570,18 @@ void HTTPServer::UpdateSockets() {
     } else if (ola::io::ToFD(state->descriptor->ReadDescriptor()) == i) {
       // Check if this socket must be updated.
       if (FD_ISSET(i, &r_set) && state->read == 0) {
-        m_select_server.AddReadDescriptor(state->descriptor);
+        m_select_server->AddReadDescriptor(state->descriptor);
         state->read = 1;
       } else if ((!FD_ISSET(i, &r_set)) && state->read == 1) {
-        m_select_server.RemoveReadDescriptor(state->descriptor);
+        m_select_server->RemoveReadDescriptor(state->descriptor);
         state->read = 0;
       }
 
       if (FD_ISSET(i, &w_set) && state->write == 0) {
-        m_select_server.AddWriteDescriptor(state->descriptor);
+        m_select_server->AddWriteDescriptor(state->descriptor);
         state->write = 1;
       } else if ((!FD_ISSET(i, &w_set)) && state->write == 1) {
-        m_select_server.RemoveWriteDescriptor(state->descriptor);
+        m_select_server->RemoveWriteDescriptor(state->descriptor);
         state->write = 0;
       }
       iter++;
@@ -781,7 +787,7 @@ int HTTPServer::ServeStaticContent(static_file_info *file_info,
   string file_path = m_data_dir;
   file_path.push_back(ola::file::PATH_SEPARATOR);
   file_path.append(file_info->file_path);
-  ifstream i_stream(file_path.data(), ifstream::binary);
+  ifstream i_stream(file_path.c_str(), ifstream::binary);
 
   if (!i_stream.is_open()) {
     OLA_WARN << "Missing file: " << file_path;
@@ -806,7 +812,7 @@ int HTTPServer::ServeStaticContent(static_file_info *file_info,
   if (!file_info->content_type.empty())
     MHD_add_response_header(mhd_response,
                             MHD_HTTP_HEADER_CONTENT_TYPE,
-                            file_info->content_type.data());
+                            file_info->content_type.c_str());
 
   int ret = MHD_queue_response(response->Connection(),
                                MHD_HTTP_OK,
@@ -828,13 +834,13 @@ void HTTPServer::InsertSocket(bool is_readable, bool is_writeable, int fd) {
   DescriptorState *state = new DescriptorState(socket);
 
   if (is_readable) {
-    m_select_server.AddReadDescriptor(state->descriptor);
+    m_select_server->AddReadDescriptor(state->descriptor);
     state->read = 1;
   }
 
   if (is_writeable) {
     state->write = 1;
-    m_select_server.AddWriteDescriptor(state->descriptor);
+    m_select_server->AddWriteDescriptor(state->descriptor);
   }
 
   m_sockets.insert(state);
@@ -842,11 +848,11 @@ void HTTPServer::InsertSocket(bool is_readable, bool is_writeable, int fd) {
 
 void HTTPServer::FreeSocket(DescriptorState *state) {
   if (state->read) {
-    m_select_server.RemoveReadDescriptor(state->descriptor);
+    m_select_server->RemoveReadDescriptor(state->descriptor);
   }
 
   if (state->write) {
-    m_select_server.RemoveWriteDescriptor(state->descriptor);
+    m_select_server->RemoveWriteDescriptor(state->descriptor);
   }
   delete state->descriptor;
   delete state;

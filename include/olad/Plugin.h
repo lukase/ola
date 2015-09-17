@@ -41,15 +41,17 @@ class AbstractPlugin {
   virtual ~AbstractPlugin() {}
 
   /**
-   * @brief Load the preferences for a plugin
+   * @brief Load the preferences for a plugin and set defaults
    */
   virtual bool LoadPreferences() = 0;
 
   /**
-   * @brief The location for preferences. This can be anything really but should
-   * indicate to the user how how the preferences were loaded.
+   * @brief The location for preferences.
+   *
+   * This can be anything really but should indicate to the user how how the
+   * preferences were loaded.
    */
-  virtual std::string PreferenceSource() const = 0;
+  virtual std::string PreferenceConfigLocation() const = 0;
 
   /**
    * @brief Is the plugin enabled?
@@ -58,13 +60,24 @@ class AbstractPlugin {
   virtual bool IsEnabled() const = 0;
 
   /**
-   * Start the plugin
+   * @brief Set the plugin's enabled state.
+   * @param enable The new enabled state
+   * @return true if this plugin is enabled
+   */
+  virtual void SetEnabledState(bool enable) = 0;
+
+  /**
+   * @brief Start the plugin
+   *
+   * Calls start_hook() which can be over-ridden by the derrived classes.
    * @return true if we started ok, false otherwise
    */
   virtual bool Start() = 0;
 
   /**
-   * Stop the plugin
+   * @brief Stop the plugin
+   *
+   * Calls stop_hook() which can be over-ridden by the derrived classes.
    * @return true on success, false on failure
    */
   virtual bool Stop() = 0;
@@ -87,7 +100,7 @@ class AbstractPlugin {
    */
   virtual std::string Description() const = 0;
 
-  virtual void ConflictsWith(std::set<ola_plugin_id> *conflict_set) = 0;
+  virtual void ConflictsWith(std::set<ola_plugin_id> *conflict_set) const = 0;
 
   // used to sort plugins
   virtual bool operator<(const AbstractPlugin &other) const = 0;
@@ -113,8 +126,9 @@ class Plugin: public AbstractPlugin {
   virtual ~Plugin() {}
 
   bool LoadPreferences();
-  std::string PreferenceSource() const;
+  std::string PreferenceConfigLocation() const;
   bool IsEnabled() const;
+  void SetEnabledState(bool enable);
   virtual bool Start();
   virtual bool Stop();
   // return true if this plugin is enabled by default
@@ -129,7 +143,7 @@ class Plugin: public AbstractPlugin {
   virtual std::string PluginPrefix() const = 0;
 
   // by default we don't conflict with any other plugins
-  virtual void ConflictsWith(std::set<ola_plugin_id>*) {}
+  virtual void ConflictsWith(std::set<ola_plugin_id>*) const {}
 
   bool operator<(const AbstractPlugin &other) const {
     return Id() < other.Id();

@@ -35,12 +35,18 @@ using ola::rdm::RDMCommand;
 using std::string;
 using std::vector;
 
+namespace {
+static const uint8_t ARTNET_UNIVERSE_COUNT = 16;
+};  // namespace
+
 void ArtNetInputPort::PostSetUniverse(Universe *old_universe,
                                       Universe *new_universe) {
-  if (new_universe)
-    m_node->SetOutputPortUniverse(PortId(), new_universe->UniverseId() % 0xf);
-  else
+  if (new_universe) {
+    m_node->SetOutputPortUniverse(
+        PortId(), new_universe->UniverseId() % ARTNET_UNIVERSE_COUNT);
+  } else {
     m_node->DisableOutputPort(PortId());
+  }
 
   if (new_universe && !old_universe) {
     m_node->SetDMXHandler(
@@ -65,28 +71,31 @@ void ArtNetInputPort::PostSetUniverse(Universe *old_universe,
     m_node->SetOutputPortRDMHandlers(PortId(), NULL, NULL, NULL);
   }
 
-  if (new_universe)
+  if (new_universe) {
     TriggerRDMDiscovery(
         NewSingleCallback(this, &ArtNetInputPort::SendTODWithUIDs));
+  }
 }
 
 void ArtNetInputPort::RespondWithTod() {
   ola::rdm::UIDSet uids;
-  if (GetUniverse())
+  if (GetUniverse()) {
     GetUniverse()->GetUIDs(&uids);
+  }
   SendTODWithUIDs(uids);
 }
 
 
 string ArtNetInputPort::Description() const {
-  if (!GetUniverse())
+  if (!GetUniverse()) {
     return "";
+  }
 
   std::ostringstream str;
-  str << "ArtNet Universe " <<
-    static_cast<int>(m_node->NetAddress()) << ":" <<
-    static_cast<int>(m_node->SubnetAddress()) << ":" <<
-    static_cast<int>(m_node->GetOutputPortUniverse(PortId()));
+  str << "ArtNet Universe "
+      << static_cast<int>(m_node->NetAddress()) << ":"
+      << static_cast<int>(m_node->SubnetAddress()) << ":"
+      << static_cast<int>(m_node->GetOutputPortUniverse(PortId()));
   return str.str();
 }
 
@@ -109,13 +118,13 @@ bool ArtNetOutputPort::WriteDMX(const DmxBuffer &buffer,
   return m_node->SendDMX(PortId(), buffer);
 }
 
-void ArtNetOutputPort::SendRDMRequest(const ola::rdm::RDMRequest *request,
+void ArtNetOutputPort::SendRDMRequest(ola::rdm::RDMRequest *request,
                                       ola::rdm::RDMCallback *on_complete) {
   // Discovery requests aren't proxied
-  vector<string> packets;
   if (request->CommandClass() == RDMCommand::DISCOVER_COMMAND) {
     OLA_WARN << "Blocked attempt to send discovery command via Artnet";
-    on_complete->Run(ola::rdm::RDM_FAILED_TO_SEND, NULL, packets);
+    ola::rdm::RunRDMCallback(on_complete,
+                             ola::rdm::RDM_PLUGIN_DISCOVERY_NOT_SUPPORTED);
     delete request;
   } else {
     m_node->SendRDMRequest(PortId(), request, on_complete);
@@ -137,11 +146,12 @@ void ArtNetOutputPort::RunIncrementalDiscovery(
 
 void ArtNetOutputPort::PostSetUniverse(Universe *old_universe,
                                        Universe *new_universe) {
-  if (new_universe)
+  if (new_universe) {
     m_node->SetInputPortUniverse(
-        PortId(), new_universe->UniverseId() % 0xf);
-  else
+        PortId(), new_universe->UniverseId() % ARTNET_UNIVERSE_COUNT);
+  } else {
     m_node->DisableInputPort(PortId());
+  }
 
   if (new_universe && !old_universe) {
     m_node->SetUnsolicitedUIDSetHandler(
@@ -155,14 +165,15 @@ void ArtNetOutputPort::PostSetUniverse(Universe *old_universe,
 }
 
 string ArtNetOutputPort::Description() const {
-  if (!GetUniverse())
+  if (!GetUniverse()) {
     return "";
+  }
 
   std::ostringstream str;
-  str << "ArtNet Universe " <<
-    static_cast<int>(m_node->NetAddress()) << ":" <<
-    static_cast<int>(m_node->SubnetAddress()) << ":" <<
-    static_cast<int>(m_node->GetInputPortUniverse(PortId()));
+  str << "ArtNet Universe "
+      << static_cast<int>(m_node->NetAddress()) << ":"
+      << static_cast<int>(m_node->SubnetAddress()) << ":"
+      << static_cast<int>(m_node->GetInputPortUniverse(PortId()));
   return str.str();
 }
 }  // namespace artnet

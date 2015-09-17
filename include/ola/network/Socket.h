@@ -14,15 +14,10 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  *
  * Socket.h
- * The Socket interfaces
+ * The UDP Socket interfaces
  * Copyright (C) 2005 Simon Newton
  *
- *  - UDPSocket, allows sending and receiving UDP datagrams
- *  - TCPSocket, this represents a TCP connection to a remote endpoint
- *
- * AcceptingSocket is the interface that defines sockets which can spawn new
- * ConnectedDescriptors. TCPAcceptingSocket is the only subclass and provides
- * the accept() functionality.
+ * UDPSocket, allows sending and receiving UDP datagrams
  */
 
 #ifndef INCLUDE_OLA_NETWORK_SOCKET_H_
@@ -156,9 +151,10 @@ class UDPSocketInterface: public ola::io::BidirectionalFileDescriptor {
    *
    * @deprecated Use the IPV4SocketAddress version instead.
    */
-  virtual bool RecvFrom(uint8_t *buffer,
-                        ssize_t *data_read,
-                        IPV4Address &source) const = 0;  // NOLINT
+  virtual bool RecvFrom(
+      uint8_t *buffer,
+      ssize_t *data_read,
+      IPV4Address &source) const = 0;  // NOLINT(runtime/references)
 
   /**
    * @brief Receive data and record the src address & port
@@ -171,10 +167,11 @@ class UDPSocketInterface: public ola::io::BidirectionalFileDescriptor {
    *
    * @deprecated Use the IPV4SocketAddress version instead.
    */
-  virtual bool RecvFrom(uint8_t *buffer,
-                        ssize_t *data_read,
-                        IPV4Address &source,  // NOLINT
-                        uint16_t &port) const = 0;  // NOLINT
+  virtual bool RecvFrom(
+      uint8_t *buffer,
+      ssize_t *data_read,
+      IPV4Address &source,  // NOLINT(runtime/references)
+      uint16_t &port) const = 0;  // NOLINT(runtime/references)
 
   /**
    * @brief Receive a datagram on the UDP Socket.
@@ -266,11 +263,11 @@ class UDPSocket: public UDPSocketInterface {
   bool RecvFrom(uint8_t *buffer, ssize_t *data_read) const;
   bool RecvFrom(uint8_t *buffer,
                 ssize_t *data_read,
-                IPV4Address &source) const;  // NOLINT
+                IPV4Address &source) const;  // NOLINT(runtime/references)
   bool RecvFrom(uint8_t *buffer,
                 ssize_t *data_read,
-                IPV4Address &source,  // NOLINT
-                uint16_t &port) const;  // NOLINT
+                IPV4Address &source,  // NOLINT(runtime/references)
+                uint16_t &port) const;  // NOLINT(runtime/references)
 
   bool RecvFrom(uint8_t *buffer,
                 ssize_t *data_read,

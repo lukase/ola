@@ -12,6 +12,7 @@ Contributors:
   Harry F, for the Eurolite USB Pro code
   Heikki Junnila, bug fixes for the debian packaging files
   Laurent (Renzo), Debian packages, FreeBSD & RDM testing.
+  Lukas Erlinghagen, win32 port.
   Joshua Moyerman, ArtNet fixes.
   Masaki Muranaka, various patches
   Nicolas, for the win32 port of libartnet
@@ -20,5 +21,6 @@ Contributors:
   Rowan Maclachlan (hippy) for various changes
   Rui Barreiros, ftdidmx plugin
   Sean Sill, various fixes.
+  Stefan Krüger, added APA102 support to the SPI Plugin
   Tobi Schäfer, for the MacPort files
   Lukas Erlinghagen, worked on the Windows/MinGW port (GSoC 2014)

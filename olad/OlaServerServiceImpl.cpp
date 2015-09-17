@@ -33,18 +33,18 @@
 #include "ola/strings/Format.h"
 #include "ola/timecode/TimeCode.h"
 #include "ola/timecode/TimeCodeEnums.h"
-#include "olad/Client.h"
 #include "olad/ClientBroker.h"
 #include "olad/Device.h"
-#include "olad/DeviceManager.h"
 #include "olad/DmxSource.h"
 #include "olad/OlaServerServiceImpl.h"
 #include "olad/Plugin.h"
 #include "olad/PluginManager.h"
 #include "olad/Port.h"
-#include "olad/PortManager.h"
 #include "olad/Universe.h"
-#include "olad/UniverseStore.h"
+#include "olad/plugin_api/Client.h"
+#include "olad/plugin_api/DeviceManager.h"
+#include "olad/plugin_api/PortManager.h"
+#include "olad/plugin_api/UniverseStore.h"
 
 namespace ola {
 
@@ -70,12 +70,43 @@ using ola::proto::UniverseInfo;
 using ola::proto::UniverseInfoReply;
 using ola::proto::UniverseNameRequest;
 using ola::proto::UniverseRequest;
+using ola::rdm::RDMRequest;
 using ola::rdm::RDMResponse;
 using ola::rdm::UID;
 using ola::rdm::UIDSet;
 using ola::rpc::RpcController;
 using std::string;
 using std::vector;
+
+namespace {
+
+template<typename RequestType>
+
+RDMRequest::OverrideOptions RDMRequestOptionsFromProto(
+    const RequestType &request) {
+  RDMRequest::OverrideOptions options;
+
+  if (!request.has_options()) {
+    return options;
+  }
+
+  const ola::proto::RDMRequestOverrideOptions &proto_options =
+      request.options();
+  if (proto_options.has_sub_start_code()) {
+    options.sub_start_code = proto_options.sub_start_code();
+  }
+  if (proto_options.has_message_length()) {
+    options.SetMessageLength(proto_options.message_length());
+  }
+  if (proto_options.has_message_count()) {
+    options.message_count = proto_options.message_count();
+  }
+  if (proto_options.has_checksum()) {
+    options.SetChecksum(proto_options.checksum());
+  }
+  return options;
+}
+}  // namespace
 
 typedef CallbackRunner<ola::rpc::RpcService::CompletionCallback> ClosureRunner;
 
@@ -103,8 +134,9 @@ void OlaServerServiceImpl::GetDmx(
     ola::rpc::RpcService::CompletionCallback* done) {
   ClosureRunner runner(done);
   Universe *universe = m_universe_store->GetUniverse(request->universe());
-  if (!universe)
+  if (!universe) {
     return MissingUniverseError(controller);
+  }
 
   const DmxBuffer buffer = universe->GetDMX();
   response->set_data(buffer.Get());
@@ -119,8 +151,9 @@ void OlaServerServiceImpl::RegisterForDmx(
   ClosureRunner runner(done);
   Universe *universe = m_universe_store->GetUniverseOrCreate(
       request->universe());
-  if (!universe)
+  if (!universe) {
     return MissingUniverseError(controller);
+  }
 
   Client *client = GetClient(controller);
   if (request->action() == ola::proto::REGISTER) {
@@ -137,8 +170,9 @@ void OlaServerServiceImpl::UpdateDmxData(
     ola::rpc::RpcService::CompletionCallback* done) {
   ClosureRunner runner(done);
   Universe *universe = m_universe_store->GetUniverse(request->universe());
-  if (!universe)
+  if (!universe) {
     return MissingUniverseError(controller);
+  }
 
   Client *client = GetClient(controller);
   DmxBuffer buffer;
@@ -164,8 +198,9 @@ void OlaServerServiceImpl::StreamDmxData(
     ola::rpc::RpcService::CompletionCallback*) {
   Universe *universe = m_universe_store->GetUniverse(request->universe());
 
-  if (!universe)
+  if (!universe) {
     return;
+  }
 
   Client *client = GetClient(controller);
   DmxBuffer buffer;
@@ -191,8 +226,9 @@ void OlaServerServiceImpl::SetUniverseName(
     ola::rpc::RpcService::CompletionCallback* done) {
   ClosureRunner runner(done);
   Universe *universe = m_universe_store->GetUniverse(request->universe());
-  if (!universe)
+  if (!universe) {
     return MissingUniverseError(controller);
+  }
 
   universe->SetName(request->name());
 }
@@ -204,8 +240,9 @@ void OlaServerServiceImpl::SetMergeMode(
     ola::rpc::RpcService::CompletionCallback* done) {
   ClosureRunner runner(done);
   Universe *universe = m_universe_store->GetUniverse(request->universe());
-  if (!universe)
+  if (!universe) {
     return MissingUniverseError(controller);
+  }
 
   Universe::merge_mode mode = request->merge_mode() == ola::proto::HTP ?
     Universe::MERGE_HTP : Universe::MERGE_LTP;
@@ -221,32 +258,38 @@ void OlaServerServiceImpl::PatchPort(
   AbstractDevice *device =
     m_device_manager->GetDevice(request->device_alias());
 
-  if (!device)
+  if (!device) {
     return MissingDeviceError(controller);
+  }
 
   bool result;
   if (request->is_output()) {
     OutputPort *port = device->GetOutputPort(request->port_id());
-    if (!port)
+    if (!port) {
       return MissingPortError(controller);
+    }
 
-    if (request->action() == ola::proto::PATCH)
+    if (request->action() == ola::proto::PATCH) {
       result = m_port_manager->PatchPort(port, request->universe());
-    else
+    } else {
       result = m_port_manager->UnPatchPort(port);
+    }
   } else {
     InputPort *port = device->GetInputPort(request->port_id());
-    if (!port)
+    if (!port) {
       return MissingPortError(controller);
+    }
 
-    if (request->action() == ola::proto::PATCH)
+    if (request->action() == ola::proto::PATCH) {
       result = m_port_manager->PatchPort(port, request->universe());
-    else
+    } else {
       result = m_port_manager->UnPatchPort(port);
+    }
   }
 
-  if (!result)
+  if (!result) {
     controller->SetFailed("Patch port request failed");
+  }
 }
 
 void OlaServerServiceImpl::SetPortPriority(
@@ -256,10 +299,11 @@ void OlaServerServiceImpl::SetPortPriority(
     ola::rpc::RpcService::CompletionCallback* done) {
   ClosureRunner runner(done);
   AbstractDevice *device =
-    m_device_manager->GetDevice(request->device_alias());
+      m_device_manager->GetDevice(request->device_alias());
 
-  if (!device)
+  if (!device) {
     return MissingDeviceError(controller);
+  }
 
   bool status;
 
@@ -271,7 +315,7 @@ void OlaServerServiceImpl::SetPortPriority(
       value = request->priority();
     } else {
       OLA_INFO << "In Set Port Priority, override mode was set but the value "
-        "wasn't specified";
+                  "wasn't specified";
       controller->SetFailed(
           "Invalid SetPortPriority request, see logs for more info");
       return;
@@ -280,27 +324,65 @@ void OlaServerServiceImpl::SetPortPriority(
 
   if (request->is_output()) {
     OutputPort *port = device->GetOutputPort(request->port_id());
-    if (!port)
+    if (!port) {
       return MissingPortError(controller);
+    }
 
-    if (inherit_mode)
+    if (inherit_mode) {
       status = m_port_manager->SetPriorityInherit(port);
-    else
+    } else {
       status = m_port_manager->SetPriorityStatic(port, value);
+    }
   } else {
     InputPort *port = device->GetInputPort(request->port_id());
-    if (!port)
+    if (!port) {
       return MissingPortError(controller);
+    }
 
-    if (inherit_mode)
+    if (inherit_mode) {
       status = m_port_manager->SetPriorityInherit(port);
-    else
+    } else {
       status = m_port_manager->SetPriorityStatic(port, value);
+    }
   }
 
-  if (!status)
+  if (!status) {
     controller->SetFailed(
         "Invalid SetPortPriority request, see logs for more info");
+  }
+}
+
+void OlaServerServiceImpl::AddUniverse(
+    const Universe * universe,
+    ola::proto::UniverseInfoReply *universe_info_reply) const {
+  UniverseInfo *universe_info = universe_info_reply->add_universe();
+  universe_info->set_universe(universe->UniverseId());
+  universe_info->set_name(universe->Name());
+  universe_info->set_merge_mode(universe->MergeMode() == Universe::MERGE_HTP
+      ? ola::proto::HTP : ola::proto::LTP);
+  universe_info->set_input_port_count(universe->InputPortCount());
+  universe_info->set_output_port_count(universe->OutputPortCount());
+  universe_info->set_rdm_devices(universe->UIDCount());
+
+  std::vector<InputPort*> input_ports;
+  std::vector<InputPort*>::const_iterator input_it;
+  universe->InputPorts(&input_ports);
+  for (input_it = input_ports.begin();
+       input_it != input_ports.end();
+       input_it++) {
+    PortInfo *pi = universe_info->add_input_ports();
+    PopulatePort(**input_it, pi);
+  }
+
+  std::vector<OutputPort*> output_ports;
+  std::vector<OutputPort*>::const_iterator output_it;
+  universe->OutputPorts(&output_ports);
+  for (output_it = output_ports.begin();
+       output_it != output_ports.end();
+       output_it++) {
+    PortInfo *pi = universe_info->add_output_ports();
+    PopulatePort(**output_it, pi);
+  }
 }
 
 void OlaServerServiceImpl::GetUniverseInfo(
@@ -309,22 +391,15 @@ void OlaServerServiceImpl::GetUniverseInfo(
     UniverseInfoReply* response,
     ola::rpc::RpcService::CompletionCallback* done) {
   ClosureRunner runner(done);
-  UniverseInfo *universe_info;
 
   if (request->has_universe()) {
     // return info for a single universe
     Universe *universe = m_universe_store->GetUniverse(request->universe());
-    if (!universe)
+    if (!universe) {
       return MissingUniverseError(controller);
+    }
 
-    universe_info = response->add_universe();
-    universe_info->set_universe(universe->UniverseId());
-    universe_info->set_name(universe->Name());
-    universe_info->set_merge_mode(universe->MergeMode() == Universe::MERGE_HTP
-        ? ola::proto::HTP: ola::proto::LTP);
-    universe_info->set_input_port_count(universe->InputPortCount());
-    universe_info->set_output_port_count(universe->OutputPortCount());
-    universe_info->set_rdm_devices(universe->UIDCount());
+    AddUniverse(universe, response);
   } else {
     // return all
     vector<Universe*> uni_list;
@@ -332,14 +407,7 @@ void OlaServerServiceImpl::GetUniverseInfo(
     vector<Universe*>::const_iterator iter;
 
     for (iter = uni_list.begin(); iter != uni_list.end(); ++iter) {
-      universe_info = response->add_universe();
-      universe_info->set_universe((*iter)->UniverseId());
-      universe_info->set_name((*iter)->Name());
-      universe_info->set_merge_mode((*iter)->MergeMode() == Universe::MERGE_HTP
-          ? ola::proto::HTP: ola::proto::LTP);
-      universe_info->set_input_port_count((*iter)->InputPortCount());
-      universe_info->set_output_port_count((*iter)->OutputPortCount());
-      universe_info->set_rdm_devices((*iter)->UIDCount());
+      AddUniverse(*iter, response);
     }
   }
 }
@@ -363,7 +431,7 @@ void OlaServerServiceImpl::GetPlugins(
 void OlaServerServiceImpl::ReloadPlugins(
     RpcController*,
     const ::ola::proto::PluginReloadRequest*,
-    ola::proto::Ack*,
+    Ack*,
     ola::rpc::RpcService::CompletionCallback* done) {
   ClosureRunner runner(done);
   if (m_reload_plugins_callback.get()) {
@@ -403,7 +471,7 @@ void OlaServerServiceImpl::GetPluginState(
     response->set_name(plugin->Name());
     response->set_enabled(plugin->IsEnabled());
     response->set_active(m_plugin_manager->IsActive(plugin_id));
-    response->set_preferences_source(plugin->PreferenceSource());
+    response->set_preferences_source(plugin->PreferenceConfigLocation());
     vector<AbstractPlugin*> conflict_list;
     m_plugin_manager->GetConflictList(plugin_id, &conflict_list);
     vector<AbstractPlugin*>::const_iterator iter = conflict_list.begin();
@@ -413,6 +481,28 @@ void OlaServerServiceImpl::GetPluginState(
     }
   } else {
     controller->SetFailed("Plugin not loaded");
+  }
+}
+
+void OlaServerServiceImpl::SetPluginState(
+    RpcController *controller,
+    const ola::proto::PluginStateChangeRequest* request,
+    Ack*,
+    ola::rpc::RpcService::CompletionCallback* done) {
+  ClosureRunner runner(done);
+  ola_plugin_id plugin_id = (ola_plugin_id) request->plugin_id();
+  AbstractPlugin *plugin = m_plugin_manager->GetPlugin(plugin_id);
+
+  if (plugin) {
+    OLA_DEBUG << "SetPluginState to " << request->enabled()
+              << " for plugin " << plugin->Name();
+    if (request->enabled()) {
+      if (!m_plugin_manager->EnableAndStartPlugin(plugin_id)) {
+        controller->SetFailed("Failed to start plugin: " + plugin->Name());
+      }
+    } else {
+      m_plugin_manager->DisableAndStopPlugin(plugin_id);
+    }
   }
 }
 
@@ -428,8 +518,9 @@ void OlaServerServiceImpl::GetDeviceInfo(
   for (iter = device_list.begin(); iter != device_list.end(); ++iter) {
     if (request->has_plugin_id()) {
       if (iter->device->Owner()->Id() == request->plugin_id() ||
-          request->plugin_id() == ola::OLA_PLUGIN_ALL)
+          request->plugin_id() == ola::OLA_PLUGIN_ALL) {
         AddDevice(iter->device, iter->alias, response);
+      }
     } else {
       AddDevice(iter->device, iter->alias, response);
     }
@@ -450,8 +541,9 @@ void OlaServerServiceImpl::GetCandidatePorts(
   if (request->has_universe()) {
     universe = m_universe_store->GetUniverse(request->universe());
 
-    if (!universe)
+    if (!universe) {
       return MissingUniverseError(controller);
+    }
   }
 
   vector<InputPort*> input_ports;
@@ -474,18 +566,20 @@ void OlaServerServiceImpl::GetCandidatePorts(
     if (universe) {
       for (input_iter = input_ports.begin(); input_iter != input_ports.end();
            input_iter++) {
-        if ((*input_iter)->GetUniverse() == universe)
+        if ((*input_iter)->GetUniverse() == universe) {
           seen_input_port = true;
-        else if (!(*input_iter)->GetUniverse())
+        } else if (!(*input_iter)->GetUniverse()) {
           unpatched_input_ports++;
+        }
       }
 
       for (output_iter = output_ports.begin();
            output_iter != output_ports.end(); output_iter++) {
-        if ((*output_iter)->GetUniverse() == universe)
+        if ((*output_iter)->GetUniverse() == universe) {
           seen_output_port = true;
-        else if (!(*output_iter)->GetUniverse())
+        } else if (!(*output_iter)->GetUniverse()) {
           unpatched_output_ports++;
+        }
       }
     } else {
       unpatched_input_ports = input_ports.size();
@@ -501,8 +595,9 @@ void OlaServerServiceImpl::GetCandidatePorts(
       (!seen_output_port || device->AllowMultiPortPatching()));
 
     if ((unpatched_input_ports == 0 || !can_bind_more_input_ports) &&
-        (unpatched_output_ports == 0 || !can_bind_more_output_ports))
+        (unpatched_output_ports == 0 || !can_bind_more_output_ports)) {
       continue;
+    }
 
     // go ahead and create the device at this point
     DeviceInfo *device_info = response->add_device();
@@ -510,35 +605,42 @@ void OlaServerServiceImpl::GetCandidatePorts(
     device_info->set_device_name(device->Name());
     device_info->set_device_id(device->UniqueId());
 
-    if (device->Owner())
+    if (device->Owner()) {
       device_info->set_plugin_id(device->Owner()->Id());
+    }
 
     for (input_iter = input_ports.begin(); input_iter != input_ports.end();
          ++input_iter) {
-      if ((*input_iter)->GetUniverse())
+      if ((*input_iter)->GetUniverse()) {
         continue;
-      if (!can_bind_more_input_ports)
+      }
+      if (!can_bind_more_input_ports) {
         break;
+      }
 
       PortInfo *port_info = device_info->add_input_port();
       PopulatePort(**input_iter, port_info);
 
-      if (!device->AllowMultiPortPatching())
+      if (!device->AllowMultiPortPatching()) {
         break;
+      }
     }
 
     for (output_iter = output_ports.begin(); output_iter != output_ports.end();
         ++output_iter) {
-      if ((*output_iter)->GetUniverse())
+      if ((*output_iter)->GetUniverse()) {
         continue;
-      if (!can_bind_more_output_ports)
+      }
+      if (!can_bind_more_output_ports) {
         break;
+      }
 
       PortInfo *port_info = device_info->add_output_port();
       PopulatePort(**output_iter, port_info);
 
-      if (!device->AllowMultiPortPatching())
+      if (!device->AllowMultiPortPatching()) {
         break;
+      }
     }
   }
 }
@@ -549,7 +651,7 @@ void OlaServerServiceImpl::ConfigureDevice(
     DeviceConfigReply* response,
     ola::rpc::RpcService::CompletionCallback* done) {
   AbstractDevice *device =
-    m_device_manager->GetDevice(request->device_alias());
+      m_device_manager->GetDevice(request->device_alias());
   if (!device) {
     MissingDeviceError(controller);
     done->Run();
@@ -567,8 +669,9 @@ void OlaServerServiceImpl::GetUIDs(
     ola::rpc::RpcService::CompletionCallback* done) {
   ClosureRunner runner(done);
   Universe *universe = m_universe_store->GetUniverse(request->universe());
-  if (!universe)
+  if (!universe) {
     return MissingUniverseError(controller);
+  }
 
   response->set_universe(universe->UniverseId());
   UIDSet uid_set;
@@ -621,29 +724,31 @@ void OlaServerServiceImpl::RDMCommand(
   UID destination(request->uid().esta_id(),
                   request->uid().device_id());
 
+  RDMRequest::OverrideOptions options = RDMRequestOptionsFromProto(*request);
+
   ola::rdm::RDMRequest *rdm_request = NULL;
   if (request->is_set()) {
     rdm_request = new ola::rdm::RDMSetRequest(
-      source_uid,
-      destination,
-      0,  // transaction #
-      1,  // port id
-      0,  // message count
-      request->sub_device(),
-      request->param_id(),
-      reinterpret_cast<const uint8_t*>(request->data().data()),
-      request->data().size());
+        source_uid,
+        destination,
+        0,  // transaction #
+        1,  // port id
+        request->sub_device(),
+        request->param_id(),
+        reinterpret_cast<const uint8_t*>(request->data().data()),
+        request->data().size(),
+        options);
   } else {
     rdm_request = new ola::rdm::RDMGetRequest(
-      source_uid,
-      destination,
-      0,  // transaction #
-      1,  // port id
-      0,  // message count
-      request->sub_device(),
-      request->param_id(),
-      reinterpret_cast<const uint8_t*>(request->data().data()),
-      request->data().size());
+        source_uid,
+        destination,
+        0,  // transaction #
+        1,  // port id
+        request->sub_device(),
+        request->param_id(),
+        reinterpret_cast<const uint8_t*>(request->data().data()),
+        request->data().size(),
+        options);
   }
 
   ola::rdm::RDMCallback *callback =
@@ -675,16 +780,18 @@ void OlaServerServiceImpl::RDMDiscoveryCommand(
   UID destination(request->uid().esta_id(),
                   request->uid().device_id());
 
+  RDMRequest::OverrideOptions options = RDMRequestOptionsFromProto(*request);
+
   ola::rdm::RDMRequest *rdm_request = new ola::rdm::RDMDiscoveryRequest(
       source_uid,
       destination,
       0,  // transaction #
       1,  // port id
-      0,  // message count
       request->sub_device(),
       request->param_id(),
       reinterpret_cast<const uint8_t*>(request->data().data()),
-      request->data().size());
+      request->data().size(),
+      options);
 
   ola::rdm::RDMCallback *callback =
     NewSingleCallback(
@@ -700,7 +807,7 @@ void OlaServerServiceImpl::RDMDiscoveryCommand(
 void OlaServerServiceImpl::SetSourceUID(
     RpcController *controller,
     const ola::proto::UID* request,
-    ola::proto::Ack*,
+    Ack*,
     ola::rpc::RpcService::CompletionCallback* done) {
   ClosureRunner runner(done);
 
@@ -711,15 +818,15 @@ void OlaServerServiceImpl::SetSourceUID(
 void OlaServerServiceImpl::SendTimeCode(
     RpcController* controller,
     const ola::proto::TimeCode* request,
-    ola::proto::Ack*,
+    Ack*,
     ola::rpc::RpcService::CompletionCallback* done) {
   ClosureRunner runner(done);
   ola::timecode::TimeCode time_code(
-    static_cast<ola::timecode::TimeCodeType>(request->type()),
-    request->hours(),
-    request->minutes(),
-    request->seconds(),
-    request->frames());
+      static_cast<ola::timecode::TimeCodeType>(request->type()),
+      request->hours(),
+      request->minutes(),
+      request->seconds(),
+      request->frames());
 
   if (time_code.IsValid()) {
     m_device_manager->SendTimeCode(time_code);
@@ -739,31 +846,30 @@ void OlaServerServiceImpl::HandleRDMResponse(
     ola::proto::RDMResponse* response,
     ola::rpc::RpcService::CompletionCallback* done,
     bool include_raw_packets,
-    ola::rdm::rdm_response_code code,
-    const RDMResponse *rdm_response,
-    const vector<string> &packets) {
+    ola::rdm::RDMReply *reply) {
   ClosureRunner runner(done);
   response->set_response_code(
-      static_cast<ola::proto::RDMResponseCode>(code));
+      static_cast<ola::proto::RDMResponseCode>(reply->StatusCode()));
 
-  if (code == ola::rdm::RDM_COMPLETED_OK) {
-    if (!rdm_response) {
+  if (reply->StatusCode() == ola::rdm::RDM_COMPLETED_OK) {
+    if (!reply->Response()) {
       // No response returned.
       OLA_WARN << "RDM code was ok but response was NULL";
       response->set_response_code(static_cast<ola::proto::RDMResponseCode>(
             ola::rdm::RDM_INVALID_RESPONSE));
-    } else if (rdm_response->ResponseType() <= ola::rdm::RDM_NACK_REASON) {
+    } else if (reply->Response()->ResponseType() <= ola::rdm::RDM_NACK_REASON) {
       // Valid RDM Response code.
-      SetProtoUID(rdm_response->SourceUID(), response->mutable_source_uid());
-      SetProtoUID(rdm_response->DestinationUID(),
+      SetProtoUID(reply->Response()->SourceUID(),
+                  response->mutable_source_uid());
+      SetProtoUID(reply->Response()->DestinationUID(),
                   response->mutable_dest_uid());
-      response->set_transaction_number(rdm_response->TransactionNumber());
+      response->set_transaction_number(reply->Response()->TransactionNumber());
       response->set_response_type(static_cast<ola::proto::RDMResponseType>(
-          rdm_response->ResponseType()));
-      response->set_message_count(rdm_response->MessageCount());
-      response->set_sub_device(rdm_response->SubDevice());
+          reply->Response()->ResponseType()));
+      response->set_message_count(reply->Response()->MessageCount());
+      response->set_sub_device(reply->Response()->SubDevice());
 
-      switch (rdm_response->CommandClass()) {
+      switch (reply->Response()->CommandClass()) {
         case ola::rdm::RDMCommand::DISCOVER_COMMAND_RESPONSE:
           response->set_command_class(ola::proto::RDM_DISCOVERY_RESPONSE);
           break;
@@ -776,34 +882,35 @@ void OlaServerServiceImpl::HandleRDMResponse(
         default:
           OLA_WARN << "Unknown command class "
                    << strings::ToHex(static_cast<unsigned int>(
-                         rdm_response->CommandClass()));
+                         reply->Response()->CommandClass()));
       }
 
-      response->set_param_id(rdm_response->ParamId());
+      response->set_param_id(reply->Response()->ParamId());
 
-      if (rdm_response->ParamData() && rdm_response->ParamDataSize()) {
-        const string data(
-            reinterpret_cast<const char*>(rdm_response->ParamData()),
-            rdm_response->ParamDataSize());
-        response->set_data(data);
-      } else {
-        response->set_data("");
+      if (reply->Response()->ParamData() &&
+          reply->Response()->ParamDataSize()) {
+        response->set_data(
+            reinterpret_cast<const char*>(reply->Response()->ParamData()),
+            reply->Response()->ParamDataSize());
       }
     } else {
       // Invalid RDM Response code.
       OLA_WARN << "RDM response present, but response type is invalid, was "
-               << strings::ToHex(rdm_response->ResponseType());
-      response->set_response_code(static_cast<ola::proto::RDMResponseCode>(
-            ola::rdm::RDM_INVALID_RESPONSE));
+               << strings::ToHex(reply->Response()->ResponseType());
+      response->set_response_code(ola::proto::RDM_INVALID_RESPONSE);
     }
   }
 
-  delete rdm_response;
-
   if (include_raw_packets) {
-    vector<string>::const_iterator iter = packets.begin();
-    for (; iter != packets.end(); ++iter) {
-      response->add_raw_response(*iter);
+    vector<rdm::RDMFrame>::const_iterator iter = reply->Frames().begin();
+    for (; iter != reply->Frames().end(); ++iter) {
+      ola::proto::RDMFrame *frame = response->add_raw_frame();
+      frame->set_raw_response(iter->data.data(), iter->data.size());
+      ola::proto::RDMFrameTiming *timing = frame->mutable_timing();
+      timing->set_response_delay(iter->timing.response_time);
+      timing->set_break_time(iter->timing.break_time);
+      timing->set_mark_time(iter->timing.mark_time);
+      timing->set_data_time(iter->timing.data_time);
     }
   }
 }
@@ -870,8 +977,9 @@ void OlaServerServiceImpl::AddDevice(AbstractDevice *device,
   device_info->set_device_name(device->Name());
   device_info->set_device_id(device->UniqueId());
 
-  if (device->Owner())
+  if (device->Owner()) {
     device_info->set_plugin_id(device->Owner()->Id());
+  }
 
   vector<InputPort*> input_ports;
   device->InputPorts(&input_ports);
@@ -928,14 +1036,4 @@ void OlaServerServiceImpl::SetProtoUID(const ola::rdm::UID &uid,
 Client* OlaServerServiceImpl::GetClient(ola::rpc::RpcController *controller) {
   return reinterpret_cast<Client*>(controller->Session()->GetData());
 }
-
-// OlaServerServiceImplFactory
-// ----------------------------------------------------------------------------
-/*
-OlaClientService *OlaClientServiceFactory::New(
-    Client *client,
-    OlaServerServiceImpl *impl) {
-  return new OlaClientService(client, impl);
-}
-*/
 }  // namespace ola

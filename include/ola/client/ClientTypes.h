@@ -22,6 +22,7 @@
 #define INCLUDE_OLA_CLIENT_CLIENTTYPES_H_
 
 #include <ola/dmx/SourcePriorities.h>
+#include <ola/rdm/RDMFrame.h>
 #include <ola/rdm/RDMResponseCodes.h>
 
 #include <olad/PortConstants.h>
@@ -270,30 +271,37 @@ class OlaUniverse {
   OlaUniverse(unsigned int id,
               merge_mode m,
               const std::string &name,
-              unsigned int input_port_count,
-              unsigned int output_port_count,
+              const std::vector<OlaInputPort> &input_ports,
+              const std::vector<OlaOutputPort> &output_ports,
               unsigned int rdm_device_count):
     m_id(id),
     m_merge_mode(m),
     m_name(name),
-    m_input_port_count(input_port_count),
-    m_output_port_count(output_port_count),
+    m_input_ports(input_ports),
+    m_output_ports(output_ports),
     m_rdm_device_count(rdm_device_count) {}
   ~OlaUniverse() {}
 
   unsigned int Id() const { return m_id;}
   merge_mode MergeMode() const { return m_merge_mode; }
   const std::string& Name() const { return m_name;}
-  unsigned int InputPortCount() const { return m_input_port_count; }
-  unsigned int OutputPortCount() const { return m_output_port_count; }
+  unsigned int InputPortCount() const { return m_input_ports.size(); }
+  unsigned int OutputPortCount() const { return m_output_ports.size(); }
   unsigned int RDMDeviceCount() const { return m_rdm_device_count; }
+
+  const std::vector<OlaInputPort> &InputPorts() const {
+    return m_input_ports;
+  }
+  const std::vector<OlaOutputPort> &OutputPorts() const {
+    return m_output_ports;
+  }
 
  private:
   unsigned int m_id;
   merge_mode m_merge_mode;
   std::string m_name;
-  unsigned int m_input_port_count;
-  unsigned int m_output_port_count;
+  std::vector<OlaInputPort> m_input_ports;
+  std::vector<OlaOutputPort> m_output_ports;
   unsigned int m_rdm_device_count;
 };
 
@@ -310,10 +318,10 @@ struct DMXMetadata {
    */
   uint8_t priority;
 
-  explicit DMXMetadata(unsigned int universe,
-                       uint8_t priority = ola::dmx::SOURCE_PRIORITY_DEFAULT)
-      : universe(universe),
-        priority(priority) {
+  explicit DMXMetadata(unsigned int _universe,
+                       uint8_t _priority = ola::dmx::SOURCE_PRIORITY_DEFAULT)
+      : universe(_universe),
+        priority(_priority) {
   }
 };
 
@@ -328,13 +336,18 @@ struct RDMMetadata {
   ola::rdm::rdm_response_code response_code;
 
   /**
+   * @brief The RDMFrames that made up this response.
+   */
+  std::vector<ola::rdm::RDMFrame> frames;
+
+  /**
    * @brief Construct a new RDMMetadata object.
    * The default response code is RDM_FAILED_TO_SEND.
    */
   RDMMetadata() : response_code(ola::rdm::RDM_FAILED_TO_SEND) {}
 
-  explicit RDMMetadata(ola::rdm::rdm_response_code response_code)
-      : response_code(response_code) {
+  explicit RDMMetadata(ola::rdm::rdm_response_code _response_code)
+      : response_code(_response_code) {
   }
 };
 }  // namespace client

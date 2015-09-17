@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * SPIPort.h
+ * SPIPort.cpp
  * The SPI plugin for ola
  * Copyright (C) 2013 Simon Newton
  */
@@ -88,7 +88,7 @@ void SPIOutputPort::RunIncrementalDiscovery(RDMDiscoveryCallback *callback) {
   return m_spi_output.RunIncrementalDiscovery(callback);
 }
 
-void SPIOutputPort::SendRDMRequest(const ola::rdm::RDMRequest *request,
+void SPIOutputPort::SendRDMRequest(ola::rdm::RDMRequest *request,
                                    ola::rdm::RDMCallback *callback) {
   return m_spi_output.SendRDMRequest(request, callback);
 }

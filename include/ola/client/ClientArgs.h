@@ -90,9 +90,9 @@ struct SendDMXArgs {
   /**
    * @brief Create a new SendDMXArgs object
    */
-  explicit SendDMXArgs(GeneralSetCallback *callback)
+  explicit SendDMXArgs(GeneralSetCallback *_callback)
       : priority(ola::dmx::SOURCE_PRIORITY_DEFAULT),
-        callback(callback) {
+        callback(_callback) {
   }
 };
 
@@ -106,7 +106,15 @@ struct SendRDMArgs {
    */
   RDMCallback *callback;
 
-  explicit SendRDMArgs(RDMCallback *callback) : callback(callback) {}
+  /**
+   * @brief Set to true to include frame & timing information in the response.
+   */
+  bool include_raw_frames;
+
+  explicit SendRDMArgs(RDMCallback *_callback)
+    : callback(_callback),
+      include_raw_frames(false) {
+  }
 };
 }  // namespace client
 }  // namespace ola

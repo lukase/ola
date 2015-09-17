@@ -13,7 +13,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  *
- * DimmerResponder_h
+ * DimmerResponder.h
  * Simulates a RDM enabled dimmer with sub devices.
  * Copyright (C) 2013 Simon Newton
  */
@@ -50,7 +50,7 @@ class DimmerResponder: public RDMControllerInterface {
   DimmerResponder(const UID &uid, uint16_t number_of_subdevices);
   virtual ~DimmerResponder();
 
-  void SendRDMRequest(const RDMRequest *request, RDMCallback *callback);
+  void SendRDMRequest(RDMRequest *request, RDMCallback *callback);
 
  private:
   SubDeviceDispatcher m_dispatcher;

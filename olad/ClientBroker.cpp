@@ -41,11 +41,12 @@ void ClientBroker::RemoveClient(const Client *client) {
 
 void ClientBroker::SendRDMRequest(const Client *client,
                                   Universe *universe,
-                                  const ola::rdm::RDMRequest *request,
+                                  ola::rdm::RDMRequest *request,
                                   ola::rdm::RDMCallback *callback) {
-  if (!STLContains(m_clients, client))
-    OLA_WARN <<
-      "Making an RDM call but the client doesn't exist in the broker!";
+  if (!STLContains(m_clients, client)) {
+    OLA_WARN << "Making an RDM call but the client doesn't exist in the "
+             << "broker!";
+  }
 
   universe->SendRDMRequest(
       request,
@@ -62,15 +63,12 @@ void ClientBroker::SendRDMRequest(const Client *client,
  */
 void ClientBroker::RequestComplete(const Client *client,
                                    ola::rdm::RDMCallback *callback,
-                                   ola::rdm::rdm_response_code code,
-                                   const ola::rdm::RDMResponse *response,
-                                   const vector<string> &packets) {
+                                   ola::rdm::RDMReply *reply) {
   if (!STLContains(m_clients, client)) {
     OLA_DEBUG << "Client no longer exists, cleaning up from RDM response";
-    delete response;
     delete callback;
   } else {
-    callback->Run(code, response, packets);
+    callback->Run(reply);
   }
 }
 }  // namespace ola

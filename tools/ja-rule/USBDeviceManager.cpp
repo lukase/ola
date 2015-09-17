@@ -46,8 +46,8 @@ using ola::thread::MutexLocker;
 using ola::thread::Thread;
 using std::auto_ptr;
 
-static const uint16_t kProductId = 0x0053;
-static const uint16_t kVendorId = 0x04d8;
+static const uint16_t kProductId = 0xaced;
+static const uint16_t kVendorId = 0x1209;
 
 namespace {
 
@@ -66,6 +66,7 @@ USBDeviceManager::USBDeviceManager(SelectServer* ss,
     : m_ss(ss),
       m_cleanup_thread(Thread::Options("cleanup-thread")),
       m_context(NULL),
+      m_start_thread_id(0),
       m_notification_cb(notification_cb),
       m_suppress_hotplug_events(false) {
 }
@@ -181,7 +182,7 @@ void USBDeviceManager::DeviceAdded(struct libusb_device* usb_device,
   }
 
   OLA_INFO << "Open Lighting Device connected";
-  auto_ptr<OpenLightingDevice> device(new OpenLightingDevice(m_ss, usb_device));
+  auto_ptr<JaRuleEndpoint> device(new JaRuleEndpoint(m_ss, usb_device));
   if (!device->Init()) {
     m_devices.erase(iter);
     return;
@@ -201,7 +202,7 @@ void USBDeviceManager::DeviceRemoved(const USBDeviceID& device_id) {
     return;
   }
 
-  OpenLightingDevice *device = NULL;
+  JaRuleEndpoint *device = NULL;
   if (!ola::STLLookupAndRemove(&m_devices, device_id, &device) ||
       device == NULL) {
     return;
@@ -213,14 +214,14 @@ void USBDeviceManager::DeviceRemoved(const USBDeviceID& device_id) {
 }
 
 void USBDeviceManager::SignalEvent(EventType event,
-                                   OpenLightingDevice* device,
+                                   JaRuleEndpoint* device,
                                    MutexLocker* locker) {
   // We hold the lock at this point.
   if (!m_notification_cb.get()) {
     return;
   }
 
-  if (m_start_thread_id == Thread::Self()) {
+  if (pthread_equal(m_start_thread_id, Thread::Self())) {
     locker->Release();
     // We're within Start(), so we can execute the callbacks directly.
     m_notification_cb->Run(event, device);
@@ -237,7 +238,7 @@ void USBDeviceManager::SignalEvent(EventType event,
   }
 }
 
-void USBDeviceManager::DeviceEvent(EventType event, OpenLightingDevice* device,
+void USBDeviceManager::DeviceEvent(EventType event, JaRuleEndpoint* device,
                                    Future<void>* f) {
   m_notification_cb->Run(event, device);
   f->Set();
@@ -252,13 +253,13 @@ void USBDeviceManager::DeviceEvent(EventType event, OpenLightingDevice* device,
  *    thread)
  *  - close the libusb device
  *
- *  These all take place in the destructor of the OpenLightingDevice.
+ *  These all take place in the destructor of the JaRuleEndpoint.
  *
  * To avoid deadlocks, we perform the deletion in a separate thread. That
- * way ~OpenLightingDevice() can block waiting for the transfer callbacks to
+ * way ~JaRuleEndpoint() can block waiting for the transfer callbacks to
  * run, without having to worry about blocking the main thread.
  */
-void USBDeviceManager::DeleteDevice(OpenLightingDevice* device) {
+void USBDeviceManager::DeleteDevice(JaRuleEndpoint* device) {
   m_cleanup_thread.Execute(ola::DeletePointerCallback(device));
 }
 
