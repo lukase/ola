@@ -25,6 +25,7 @@
 
 #include "ola/ActionQueue.h"
 #include "ola/Callback.h"
+#include "ola/Constants.h"
 #include "ola/DmxBuffer.h"
 #include "ola/Logging.h"
 #include "ola/StringUtils.h"
@@ -61,7 +62,7 @@ using std::vector;
 const char OladHTTPServer::HELP_PARAMETER[] = "help";
 const char OladHTTPServer::HELP_REDIRECTION[] = "?help=1";
 const char OladHTTPServer::K_BACKEND_DISCONNECTED_ERROR[] =
-  "Failed to send request, client isn't connected";
+    "Failed to send request, client isn't connected";
 const char OladHTTPServer::K_PRIORITY_VALUE_SUFFIX[] = "_priority_value";
 const char OladHTTPServer::K_PRIORITY_MODE_SUFFIX[] = "_priority_mode";
 
@@ -184,6 +185,12 @@ OladHTTPServer::OladHTTPServer(ExportMap *export_map,
       "/new/libs/angular/js/angular.min.js",
       HTTPServer::CONTENT_TYPE_JS);
   m_server.RegisterFile(
+      "/new/libs/marked/js/marked.min.js",
+      HTTPServer::CONTENT_TYPE_JS);
+  m_server.RegisterFile(
+      "/new/libs/angular-marked/js/angular-marked.min.js",
+      HTTPServer::CONTENT_TYPE_JS);
+  m_server.RegisterFile(
       "/new/libs/bootstrap/js/bootstrap.min.js",
       HTTPServer::CONTENT_TYPE_JS);
   m_server.RegisterFile(
@@ -219,6 +226,155 @@ OladHTTPServer::OladHTTPServer(ExportMap *export_map,
   m_server.RegisterFile(
       "/new/img/logo-mini.png",
       HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/logo-mini@2x.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+
+  // Favicons for the new UI
+  m_server.RegisterFile(
+      "/new/img/favicons/android-chrome-144x144.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/android-chrome-192x192.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/android-chrome-36x36.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/android-chrome-48x48.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/android-chrome-72x72.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/android-chrome-96x96.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/apple-touch-icon-114x114.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/apple-touch-icon-120x120.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/apple-touch-icon-144x144.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/apple-touch-icon-152x152.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/apple-touch-icon-180x180.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/apple-touch-icon-57x57.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/apple-touch-icon-60x60.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/apple-touch-icon-72x72.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/apple-touch-icon-76x76.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/apple-touch-icon-precomposed.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/apple-touch-icon.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/apple-touch-startup-image-1182x2208.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/apple-touch-startup-image-1242x2148.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/apple-touch-startup-image-1496x2048.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/apple-touch-startup-image-1536x2008.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/apple-touch-startup-image-320x460.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/apple-touch-startup-image-640x1096.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/apple-touch-startup-image-640x920.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/apple-touch-startup-image-748x1024.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/apple-touch-startup-image-750x1294.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/apple-touch-startup-image-768x1004.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/browserconfig.xml",
+      HTTPServer::CONTENT_TYPE_XML);
+  m_server.RegisterFile(
+      "/new/img/favicons/coast-228x228.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/favicon-16x16.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/favicon-230x230.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/favicon-32x32.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/favicon-96x96.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/favicon.ico",
+      HTTPServer::CONTENT_TYPE_ICO);
+  m_server.RegisterFile(
+      "/new/img/favicons/firefox_app_128x128.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/firefox_app_512x512.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/firefox_app_60x60.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/manifest.json",
+      HTTPServer::CONTENT_TYPE_JSON);
+  m_server.RegisterFile(
+      "/new/img/favicons/manifest.webapp",
+      HTTPServer::CONTENT_TYPE_PLAIN);
+  m_server.RegisterFile(
+      "/new/img/favicons/mstile-144x144.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/mstile-150x150.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/mstile-310x150.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/mstile-310x310.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/mstile-70x70.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/open-graph.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/twitter.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/yandex-browser-50x50.png",
+      HTTPServer::CONTENT_TYPE_PNG);
+  m_server.RegisterFile(
+      "/new/img/favicons/yandex-browser-manifest.json",
+      HTTPServer::CONTENT_TYPE_JSON);
 
   m_start_time_t = time(NULL);
 }
@@ -284,9 +440,18 @@ int OladHTTPServer::JsonServerStats(const HTTPRequest*,
   struct tm start_time;
   localtime_r(&m_start_time_t, &start_time);
   strftime(start_time_str, sizeof(start_time_str), "%c", &start_time);
-#endif
+#endif  // _WIN32
 
   JsonObject json;
+#ifdef OLA_SCREENSHOT_MODE
+  json.Add("hostname", "***");
+  json.Add("instance_name", "***");
+  json.Add("config_dir", "***");
+  json.Add("ip", "***.***.***.***");
+  json.Add("broadcast", "***.***.***.***");
+  json.Add("subnet", "***.***.***.***");
+  json.Add("hw_address", "**:**:**:**:**:**");
+#else
   json.Add("hostname", ola::network::FQDN());
   json.Add("instance_name", m_ola_server->InstanceName());
   json.Add("config_dir",
@@ -295,6 +460,7 @@ int OladHTTPServer::JsonServerStats(const HTTPRequest*,
   json.Add("broadcast", m_interface.bcast_address.ToString());
   json.Add("subnet", m_interface.subnet_mask.ToString());
   json.Add("hw_address", m_interface.hw_address.ToString());
+#endif  // OLA_SCREENSHOT_MODE
   json.Add("version", ola::base::Version::GetVersion());
   json.Add("up_since", start_time_str);
   json.Add("quit_enabled", m_enable_quit);
@@ -499,9 +665,9 @@ int OladHTTPServer::ModifyUniverse(const HTTPRequest *request,
 
   if (merge_mode == "LTP" || merge_mode == "HTP") {
     OlaUniverse::merge_mode mode = (
-      merge_mode == "LTP" ? OlaUniverse::MERGE_LTP : OlaUniverse::MERGE_HTP);
+        merge_mode == "LTP" ? OlaUniverse::MERGE_LTP : OlaUniverse::MERGE_HTP);
     action_queue->AddAction(
-      new SetMergeModeAction(&m_client, universe_id, mode));
+        new SetMergeModeAction(&m_client, universe_id, mode));
   }
 
   string remove_port_ids = request->GetPostParameter("remove_ports");
@@ -1000,7 +1166,7 @@ void OladHTTPServer::SendModifyUniverseResponse(HTTPResponse *response,
 
 /**
  * @brief Serve usage information.
- * @param response the reponse to use.
+ * @param response the response to use.
  * @param details the usage information
  */
 int OladHTTPServer::ServeUsage(HTTPResponse *response, const string &details) {

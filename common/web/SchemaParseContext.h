@@ -32,9 +32,9 @@
 #include "common/web/PointerTracker.h"
 #include "common/web/SchemaErrorLogger.h"
 #include "common/web/SchemaKeywords.h"
-#include "common/web/OptionalItem.h"
 #include "ola/web/JsonSchema.h"
 #include "ola/web/JsonParser.h"
+#include "ola/web/OptionalItem.h"
 
 namespace ola {
 namespace web {
@@ -80,7 +80,7 @@ class ObjectParseContext : public SchemaParseContextInterface {
   ObjectParseContext() {}
 
   /**
-   * @brief Called when we encouter a property
+   * @brief Called when we encounter a property
    */
   void ObjectKey(SchemaErrorLogger*, const std::string &keyword) {
     m_keyword.Set(keyword);

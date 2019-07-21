@@ -23,7 +23,7 @@
  *     provide timersub.
  *   - Reduces bugs by using the compiler to check if the value was supposed
  *     to be an interval or absolute time. For example, passing an absolute
- *     time intstead of an Interval to RegisterTimeout would be bad.
+ *     time instead of an Interval to RegisterTimeout would be bad.
  */
 
 #include <ola/Clock.h>
@@ -32,7 +32,7 @@
 
 #if HAVE_CONFIG_H
 #include <config.h>
-#endif
+#endif  // HAVE_CONFIG_H
 
 #include <iomanip>
 #include <ostream>
@@ -166,13 +166,13 @@ void BaseTimeVal::Set(int64_t interval_useconds) {
       interval_useconds / USEC_IN_SECONDS);
 #else
   m_tv.tv_sec = interval_useconds / USEC_IN_SECONDS;
-#endif
+#endif  // HAVE_TIME_T
 
 #ifdef HAVE_SUSECONDS_T
   m_tv.tv_usec = static_cast<suseconds_t>(interval_useconds % USEC_IN_SECONDS);
 #else
     m_tv.tv_usec = interval_useconds % USEC_IN_SECONDS;
-#endif
+#endif  // HAVE_SUSECONDS_T
 }
 
 TimeInterval& TimeInterval::operator=(const TimeInterval& other) {

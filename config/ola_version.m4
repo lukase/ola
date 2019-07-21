@@ -18,7 +18,7 @@
 # Define the version information
 # -----------------------------------------------------------------------------
 m4_define([ola_major_version], [0])
-m4_define([ola_minor_version], [9])
+m4_define([ola_minor_version], [10])
 m4_define([ola_revision_version], [7])
 
 m4_define([ola_version],

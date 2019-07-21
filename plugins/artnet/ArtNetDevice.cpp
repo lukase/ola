@@ -57,7 +57,7 @@ using std::string;
 using std::vector;
 
 const char ArtNetDevice::K_ALWAYS_BROADCAST_KEY[] = "always_broadcast";
-const char ArtNetDevice::K_DEVICE_NAME[] = "ArtNet";
+const char ArtNetDevice::K_DEVICE_NAME[] = "Art-Net";
 const char ArtNetDevice::K_IP_KEY[] = "ip";
 const char ArtNetDevice::K_LIMITED_BROADCAST_KEY[] = "use_limited_broadcast";
 const char ArtNetDevice::K_LONG_NAME_KEY[] = "long_name";
@@ -92,10 +92,9 @@ bool ArtNetDevice::StartHook() {
       ola::network::InterfacePicker::NewPicker());
   ola::network::InterfacePicker::Options options;
   options.include_loopback = m_preferences->GetValueAsBool(K_LOOPBACK_KEY);
-  if (!picker->ChooseInterface(
-          &iface,
-          m_preferences->GetValue(K_IP_KEY),
-          options)) {
+  if (!picker->ChooseInterface(&iface,
+                               m_preferences->GetValue(K_IP_KEY),
+                               options)) {
     OLA_INFO << "Failed to find an interface";
     return false;
   }
@@ -105,7 +104,7 @@ bool ArtNetDevice::StartHook() {
       K_ALWAYS_BROADCAST_KEY);
   node_options.use_limited_broadcast_address = m_preferences->GetValueAsBool(
       K_LIMITED_BROADCAST_KEY);
-  // OLA Output ports are ArtNet input ports
+  // OLA Output ports are Art-Net input ports
   node_options.input_port_count = StringToIntOrDefault(
       m_preferences->GetValue(K_OUTPUT_PORT_KEY),
       K_DEFAULT_OUTPUT_PORT_COUNT);

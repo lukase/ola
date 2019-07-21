@@ -9,7 +9,8 @@ AC_CONFIG_AUX_DIR([config])
 AC_SUBST([ac_aux_dir])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([config])
-AM_INIT_AUTOMAKE([subdir-objects])
+# Make us require Automake 1.11.1
+AM_INIT_AUTOMAKE([1.11.1 subdir-objects])
 
 # OLA version variables
 AC_SUBST([ola_major_version])
@@ -32,17 +33,122 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_MKDIR_P
-AC_LIBTOOL_WIN32_DLL
+
+# check if the compiler supports -std=gnu++98
+AC_MSG_CHECKING(for -std=gnu++98 support)
+old_cxxflags=$CXXFLAGS
+CXXFLAGS="${CXXFLAGS} -std=gnu++98 -Wall -Werror"
+AC_CACHE_VAL(ac_cv_gnu_plus_plus_98,
+  AC_COMPILE_IFELSE(
+     [AC_LANG_PROGRAM([], [])],
+     [ac_cv_gnu_plus_plus_98=yes],
+     [ac_cv_gnu_plus_plus_98=no])
+)
+CXXFLAGS=$old_cxxflags
+AC_MSG_RESULT($ac_cv_gnu_plus_plus_98)
+
+AM_CONDITIONAL([SUPPORTS_GNU_PLUS_PLUS_98], [test "x$ac_cv_gnu_plus_plus_98" = xyes])
+
+# check if the compiler supports -std=gnu++11
+AC_MSG_CHECKING(for -std=gnu++11 support)
+old_cxxflags=$CXXFLAGS
+CXXFLAGS="${CXXFLAGS} -std=gnu++11 -Wall -Werror"
+AC_CACHE_VAL(ac_cv_gnu_plus_plus_11,
+  AC_COMPILE_IFELSE(
+     [AC_LANG_PROGRAM([], [])],
+     [ac_cv_gnu_plus_plus_11=yes],
+     [ac_cv_gnu_plus_plus_11=no])
+)
+CXXFLAGS=$old_cxxflags
+AC_MSG_RESULT($ac_cv_gnu_plus_plus_11)
+
+AM_CONDITIONAL([SUPPORTS_GNU_PLUS_PLUS_11], [test "x$ac_cv_gnu_plus_plus_11" = xyes])
+
+# This checks whether random needs gnu++11 or not, it doesn't set HAVE_RANDOM
+# (as it's using AC_CHECK_HEADER not HEADERS), we do that later as normal
+# We don't pass the compiler flag to the preprocessor (CPPFLAGS) because that
+# variable is used by the C preprocessor too, and some of the pthread checks
+# test for C code, which complains it doesn't understand gnu++. We may
+# therefore generate some warnings in configure, but it should all work!
+ac_cv_header_random_98="no"
+ac_cv_header_random_11="no"
+
+AC_MSG_NOTICE([checking for random gnu++98 compatibility])
+old_cxxflags=$CXXFLAGS
+CXXFLAGS="${CXXFLAGS} -std=gnu++98 -Wall -Werror"
+# Manually purge the cache
+AS_UNSET([ac_cv_header_random])
+AC_CHECK_HEADER(
+   [random],
+   [ac_cv_header_random_98="yes"],
+   [ac_cv_header_random_98="no"])
+# Manually purge the cache
+AS_UNSET([ac_cv_header_random])
+CXXFLAGS=$old_cxxflags
+
+AS_IF([test "x$ac_cv_gnu_plus_plus_11" = xyes],
+      [AC_MSG_NOTICE([checking for random gnu++11 compatibility])
+       old_cxxflags=$CXXFLAGS
+       CXXFLAGS="${CXXFLAGS} -std=gnu++11 -Wall -Werror"
+       # Manually purge the cache
+       AS_UNSET([ac_cv_header_random])
+       AC_CHECK_HEADER(
+          [random],
+          [ac_cv_header_random_11=yes],
+          [ac_cv_header_random_11=no])
+       # Manually purge the cache
+       AS_UNSET([ac_cv_header_random])
+       CXXFLAGS=$old_cxxflags])
+
+# force us into gnu++98 mode if necessary
+# If gnu++11 and gnu++98 then
+#   If random works with gnu++98
+#     If protobuf < 3.6
+#       If no unit tests, force to gnu++98
+#       Else we have unit tests
+#         If cppunit < 1.14.0, force to gnu++98
+#         Else turn off deprecation messages for std::auto_ptr and run gnu++11
+#     Else assume we have protobuf >= 3.6 (later checks will confirm that for certain), turn off deprecation messages for std::auto_ptr and run gnu++11
+#   Else turn off deprecation messages for std::auto_ptr and run gnu++11
+require_gnu_plus_plus_11="no"
+AS_IF([test "x$ac_cv_gnu_plus_plus_11" = xyes],
+      [AS_IF([test "x$ac_cv_gnu_plus_plus_98" = xyes],
+             [AS_IF([test "x$ac_cv_header_random_98" = xyes],
+                    [PKG_CHECK_MODULES([PROTOBUF1], [protobuf < 3.6],
+                                       [AS_IF([test "x$enable_unittests" = xno],
+                                              [CXXFLAGS="$CXXFLAGS -std=gnu++98"],
+                                              [PKG_CHECK_MODULES([CPPUNIT1], [cppunit < 1.14.0],
+                                                                 [CXXFLAGS="$CXXFLAGS -std=gnu++98"],
+                                                                 [PKG_CHECK_MODULES([CPPUNIT2], [cppunit >= 1.14.0],
+                                                                                    [require_gnu_plus_plus_11="yes"],
+                                                                                    [AC_MSG_WARN([OLA requires std::auto_ptr support.])])
+                                                                 ])
+                                              ])
+                                       ],
+                                       [require_gnu_plus_plus_11="yes"])
+                    ],
+                    [require_gnu_plus_plus_11="yes"])
+             ])
+      ])
+AS_IF([test "x$require_gnu_plus_plus_11" = xyes],
+      [CXXFLAGS="$CXXFLAGS -std=gnu++11"])
+AM_CONDITIONAL([GNU_PLUS_PLUS_11_DEPRECATIONS], [test "x$require_gnu_plus_plus_11" = xyes])
 
 # Checks for header files.
 AC_HEADER_DIRENT
 AC_HEADER_RESOLV
 AC_HEADER_STDC
-AC_CHECK_HEADERS([arpa/inet.h bits/sockaddr.h fcntl.h float.h limits.h malloc.h netinet/in.h stdint.h stdlib.h string.h strings.h sys/file.h sys/ioctl.h sys/socket.h sys/time.h sys/timeb.h syslog.h termios.h unistd.h])
-AC_CHECK_HEADERS([asm/termios.h assert.h dlfcn.h endian.h errno.h execinfo.h \
+# Required headers (we cannot work without these)
+AC_CHECK_HEADERS([errno.h],[],[AC_MSG_ERROR([Missing a required header])])
+# Other headers (we can work without these, but may need to modify things slightly)
+AC_CHECK_HEADERS([arpa/inet.h bits/sockaddr.h fcntl.h float.h limits.h \
+                  malloc.h netinet/in.h stdint.h stdlib.h string.h strings.h \
+                  sys/file.h sys/ioctl.h sys/socket.h sys/time.h sys/timeb.h \
+                  syslog.h termios.h unistd.h])
+AC_CHECK_HEADERS([asm/termios.h assert.h dlfcn.h endian.h execinfo.h \
                   linux/if_packet.h math.h net/ethernet.h stropts.h \
                   sys/param.h sys/types.h sys/uio.h sysexits.h])
-AC_CHECK_HEADERS([winsock2.h])
+AC_CHECK_HEADERS([winsock2.h winerror.h])
 AC_CHECK_HEADERS([random])
 
 # This needs stuff in sys/param.h on OpenBSD
@@ -128,11 +234,37 @@ AC_CHECK_FUNCS([bzero gettimeofday memmove memset mkdir strdup strrchr \
                 socket strerror getifaddrs getloadavg getpwnam_r getpwuid_r \
                 getgrnam_r getgrgid_r secure_getenv])
 
-LT_INIT
-AC_PROG_LIBTOOL
+AC_MSG_CHECKING(for readdir_r deprecation)
+old_cxxflags=$CXXFLAGS
+CXXFLAGS="${CXXFLAGS} -Werror=deprecated-declarations"
+AC_CACHE_VAL(ac_cv_readdir_r_deprecation,
+  AC_COMPILE_IFELSE(
+     [AC_LANG_PROGRAM([[#include <dirent.h>
+#include <unistd.h>]],[[
+        const char* arg = "/";
+        DIR * dir;
+        struct dirent *buf, *de;
+        dir = opendir(arg);
+        readdir_r(dir,buf,&de);
+]])],
+     [ac_cv_readdir_r_deprecation=no],
+     [ac_cv_readdir_r_deprecation=yes])
+)
+CXXFLAGS=$old_cxxflags
+AC_MSG_RESULT($ac_cv_readdir_r_deprecation)
+
+AS_IF([test "x$ac_cv_readdir_r_deprecation" = xyes],
+      [CXXFLAGS="$CXXFLAGS -Wno-error=deprecated-declarations"],
+      [])
+
+LT_INIT([win32-dll])
 
 # Decide if we're building on Windows early on.
 AM_CONDITIONAL([USING_WIN32], [test "x$host_os" = xmingw32])
+have_not_win32="yes"
+if test "x$host_os" = xmingw32; then
+  have_not_win32="no"
+fi
 
 # Epoll
 AX_HAVE_EPOLL(
@@ -148,7 +280,11 @@ AC_MSG_CHECKING(for -rdynamic support)
 old_cppflags=$CPPFLAGS
 CPPFLAGS="${CPPFLAGS} -rdynamic -Wall -Werror"
 AC_CACHE_VAL(ac_cv_rdynamic,
-  AC_TRY_COMPILE([], [], ac_cv_rdynamic=yes, ac_cv_rdynamic=no))
+  AC_COMPILE_IFELSE(
+     [AC_LANG_PROGRAM([], [])],
+     [ac_cv_rdynamic=yes],
+     [ac_cv_rdynamic=no])
+)
 CPPFLAGS=$old_cppflags
 AC_MSG_RESULT($ac_cv_rdynamic)
 
@@ -157,11 +293,11 @@ AM_CONDITIONAL([SUPPORTS_RDYNAMIC], [test "x$ac_cv_rdynamic" = xyes])
 # check for ipv6 support - taken from unp
 AC_MSG_CHECKING(for IPv6 support)
 AC_CACHE_VAL(ac_cv_ipv6,
-        AC_TRY_RUN([
-#       include <stdlib.h>
-#       include <sys/types.h>
-#       include <sys/socket.h>
-#       include <netinet/in.h>
+        AC_RUN_IFELSE(
+         [AC_LANG_PROGRAM([[#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>]],[[
         /* Make sure the definitions for AF_INET6 and struct sockaddr_in6
          * are defined, and that we can actually create an IPv6 TCP socket.
          */
@@ -171,10 +307,12 @@ AC_CACHE_VAL(ac_cv_ipv6,
                 struct sockaddr_in6 foo;
                 fd = socket(AF_INET6, SOCK_STREAM, 0);
                 exit(fd >= 0 ? 0 : 1);
-        }],
-        ac_cv_ipv6=yes,
-        ac_cv_ipv6=no,
-        ac_cv_ipv6=no))
+        }
+        ]])],
+        [ac_cv_ipv6=yes],
+        [ac_cv_ipv6=no],
+        [ac_cv_ipv6=no])
+)
 AC_MSG_RESULT($ac_cv_ipv6)
 AS_IF([test "x$ac_cv_ipv6" = xyes],
       [AC_DEFINE([IPV6], [1], [Define to 1 if the system supports IPv6])])
@@ -291,7 +429,7 @@ AS_IF([test "x$have_dmx4linux" = xyes],
 # header execinfo.h isn't enough
 AC_CHECK_LIB([execinfo], [backtrace], [use_lexecinfo="yes"])
 case "${host_os}" in
-  *freebsd*)
+  *freebsd* | *dragonfly*)
   LIBS="$LIBS -lexecinfo"
   ;;
 esac
@@ -301,6 +439,8 @@ have_libftd2xx="no"
 AM_CONDITIONAL([HAVE_LIBFTD2XX], [test "x$have_libftd2xx" = xyes])
 
 # ncurses
+# Location is ncurses/curses.h on DragonFly
+AC_CHECK_HEADERS([curses.h ncurses/curses.h])
 AC_CHECK_LIB([ncurses], [initscr], [have_ncurses="yes"])
 AM_CONDITIONAL([HAVE_NCURSES], [test "x$have_ncurses" = xyes])
 
@@ -406,22 +546,25 @@ AS_IF([test "x$use_ossp_uuid" = xyes],
 
 # DNS-SD support
 # We use either avahi or the Apple DNS-SD library.
+AC_ARG_WITH(dns-sd,
+[AS_HELP_STRING([--without-dns-sd], [disable DNS-SD support])],,)
+if test "x$with_dns_sd" != "xno"; then
+	# dns_sd
+	AC_CHECK_HEADER(
+	  [dns_sd.h],
+	  [AC_SEARCH_LIBS(DNSServiceRegister, [dns_sd], [have_dnssd="yes"])])
 
-# dns_sd
-AC_CHECK_HEADER(
-  [dns_sd.h],
-  [AC_SEARCH_LIBS(DNSServiceRegister, [dns_sd], [have_dnssd="yes"])])
+	# avahi
+	PKG_CHECK_MODULES(
+	  avahi,
+	  [avahi-client],
+	  [have_avahi="yes"],
+	  [true])
+fi
 
 AS_IF([test "x$have_dnssd" = xyes],
       [AC_DEFINE([HAVE_DNSSD], [1], [Defined to use Bonjour DNS_SD])])
 AM_CONDITIONAL([HAVE_DNSSD], [test "x$have_dnssd" = xyes])
-
-# avahi
-PKG_CHECK_MODULES(
-  avahi,
-  [avahi-client],
-  [have_avahi="yes"],
-  [true])
 
 AS_IF([test "x$have_avahi" = xyes],
       [AC_DEFINE([HAVE_AVAHI], [1], [Defined to use Avahi])])
@@ -439,7 +582,7 @@ AC_ARG_ENABLE(
   [unittests],
   [AS_HELP_STRING([--disable-unittests], [Disable all unittests])])
 AS_IF([test "x$enable_unittests" != xno],
-      [AM_PATH_CPPUNIT([1.9.6], [],
+      [PKG_CHECK_MODULES([CPPUNIT], [cppunit >= 1.9.6], [],
           [AC_MSG_ERROR([Missing cppunit, please install >= 1.9.6])])
       ])
 AM_CONDITIONAL([BUILD_TESTS], [test "x$enable_unittests" != xno])
@@ -494,6 +637,18 @@ AS_IF([test "x$have_microhttpd" = xyes],
       [AC_DEFINE([HAVE_LIBMICROHTTPD], [1],
                  [define if libmicrohttpd is installed])])
 
+if test "x$have_microhttpd" = xyes; then
+  # Check if we have MHD_create_response_from_buffer
+  old_cflags=$CFLAGS
+  old_libs=$LIBS
+  CFLAGS="${CPPFLAGS} ${libmicrohttpd_CFLAGS}"
+  LIBS="${LIBS} ${libmicrohttpd_LIBS}"
+  AC_CHECK_FUNCS([MHD_create_response_from_buffer])
+  # restore CFLAGS
+  CFLAGS=$old_cflags
+  LIBS=$old_libs
+fi
+
 # Java API, this requires Maven
 AC_ARG_ENABLE(
   [java-libs],
@@ -510,19 +665,33 @@ AC_ARG_ENABLE(
   [ja-rule],
   [AS_HELP_STRING([--enable-ja-rule], [Build the Ja Rule test tool])])
 
-# libftdi: this requires libusb-0.1.4+ don't know if I should also
+# libftdi0: this requires libusb-0.1.4+ don't know if I should also
 # check for it, since the libusb check above is not for 0.1.4 but for libusb-1
 AC_ARG_ENABLE(
   [libftdi],
   [AS_HELP_STRING([--disable-libftdi],
-                  [Avoid using libftdi even if it exists])])
+                  [Avoid using libftdi0 or libftdi1 even if either exists])])
 
-have_libftdi="no"
+have_libftdi0="no"
 AS_IF([test "x$enable_libftdi" != xno],
-      [PKG_CHECK_MODULES([libftdi], [libftdi >= 0.18], [have_libftdi="yes"],
+      [PKG_CHECK_MODULES([libftdi0], [libftdi >= 0.18], [have_libftdi0="yes"],
                          [true])])
+AM_CONDITIONAL([HAVE_LIBFTDI0], [test "x$have_libftdi0" = xyes])
+AS_IF([test "x$have_libftdi0" = xyes],
+      [AC_DEFINE([HAVE_LIBFTDI0], [1], [define if libftdi0 is installed])])
+have_libftdi1="no"
+AS_IF([test "x$enable_libftdi" != xno],
+      [PKG_CHECK_MODULES([libftdi1], [libftdi1 >= 1.0], [have_libftdi1="yes"],
+                         [true])])
+AM_CONDITIONAL([HAVE_LIBFTDI1], [test "x$have_libftdi1" = xyes])
+AS_IF([test "x$have_libftdi1" = xyes],
+      [AC_DEFINE([HAVE_LIBFTDI1], [1], [define if libftdi1 is installed])])
+have_libftdi="no"
+if test "x$have_libftdi0" = xyes || test "x$have_libftdi1" = xyes; then
+  have_libftdi="yes"
+fi
 AS_IF([test "x$have_libftdi" = xyes],
-      [AC_DEFINE([HAVE_LIBFTDI], [1], [define if libftdi is installed])])
+      [AC_DEFINE([HAVE_LIBFTDI], [1], [define if libftdi0 or libftdi1 is installed])])
 
 # libusb
 AC_ARG_ENABLE(
@@ -550,8 +719,17 @@ AS_IF([test "x$enable_libusb" != xno],
                          [have_libusb_hotplug_api="yes"], [true])])
 AS_IF([test "x$have_libusb_hotplug_api" = xyes],
       [AC_DEFINE([HAVE_LIBUSB_HOTPLUG_API], [1],
-                 [define if libusb is installed and the libusb])])
+                 [define if libusb is installed and the libusb hotplug API is available])])
 AM_CONDITIONAL([HAVE_LIBUSB_HOTPLUG_API], [test "x$have_libusb_hotplug_api" = xyes])
+
+have_libusb_set_option="no"
+AS_IF([test "x$enable_libusb" != xno],
+      [PKG_CHECK_MODULES([libusb_set_option], [libusb-1.0 >= 1.0.22],
+                         [have_libusb_set_option="yes"], [true])])
+AS_IF([test "x$have_libusb_set_option" = xyes],
+      [AC_DEFINE([HAVE_LIBUSB_SET_OPTION], [1],
+                 [define if libusb is installed and libusb_set_option is available])])
+AM_CONDITIONAL([HAVE_LIBUSB_SET_OPTION], [test "x$have_libusb_set_option" = xyes])
 
 # UART direct plugin
 AC_ARG_ENABLE(
@@ -610,7 +788,7 @@ AS_IF([test "x$enable_root_check" = xno],
 # Use tcmalloc. This is used by the buildbot leak checks.
 AC_ARG_ENABLE([tcmalloc], AS_HELP_STRING([--enable-tcmalloc], [Use tcmalloc]))
 AS_IF([test "x$enable_tcmalloc" = xyes],
-      [LDFLAGS="$LDFLAGS -ltcmalloc"])
+      [AC_CHECK_LIB([tcmalloc], [malloc], [AM_LDFLAGS="$AM_LDFLAGS -ltcmalloc"], [AS_ERROR([tcmalloc not found, but enabled on command line])])])
 
 # Optionally set the Doxygen version to "Latest Git" for website latest
 # version.
@@ -618,6 +796,36 @@ AC_ARG_ENABLE(
   [doxygen-version],
   [AS_HELP_STRING([--disable-doxygen-version],
   [Substitute the Doxygen version with latest, for the website])])
+
+# UUCP Lock directory
+AC_ARG_WITH([uucp-lock],
+            [AS_HELP_STRING([--with-uucp-lock],
+                            [The directory to use for UUCP lock files])],
+            [], [])
+
+# Try to locate the UUCP lock path.
+UUCPLOCK=""
+AH_TEMPLATE([UUCP_LOCK_DIR], [Define to the path of the UUCP lock directory])
+AC_MSG_CHECKING(for serial port lock directory)
+
+# This list is from the minicom configs, The Filesystem Hierarchy Standard says
+# /var/lock is the one true source.
+for ac_uucplock in /var/lock /etc/locks /usr/spool/locks /var/spool/locks /var/spool/lock /usr/spool/uucp /var/spool/uucp /var/run; do
+  AS_IF([test -d $ac_uucplock], [UUCPLOCK=$ac_uucplock; break])
+done
+
+# Mac stores the lock files in /tmp
+case "${host_os}" in
+  *darwin*)
+    UUCPLOCK=/tmp
+    ;;
+esac
+
+AS_IF([test "x$with_uucp_lock" != x], [UUCPLOCK=$with_uucp_lock])
+AS_IF([test -d $UUCPLOCK],
+      [AC_DEFINE_UNQUOTED(UUCP_LOCK_DIR, "$UUCPLOCK")
+       AC_MSG_RESULT($UUCPLOCK)],
+      AC_MSG_ERROR(no suitable lock directory))
 
 # Python wrappers & RDM Responder tests.
 #####################################################
@@ -631,6 +839,13 @@ AS_IF([test "${enable_python_libs}" = "yes"],
           [ac_cv_have_pymod_google_protobuf],
           [AX_PYTHON_MODULE([google.protobuf], [fatal])
            eval ac_cv_have_pymod_google_protobuf=\$AS_TR_CPP([HAVE_PYMOD_google.protobuf])])
+     ])
+
+AS_IF([test "${enable_rdm_tests}" = "yes"],
+      [AC_CACHE_CHECK([for $PYTHON_NAME module: numpy],
+          [ac_cv_have_pymod_numpy],
+          [AX_PYTHON_MODULE([numpy], [fatal])
+           eval ac_cv_have_pymod_numpy=\$AS_TR_CPP([HAVE_PYMOD_numpy])])
      ])
 
 # Libraries, that depend on the feature args above.
@@ -687,7 +902,8 @@ PLUGIN_SUPPORT(gpio, USE_GPIO)
 PLUGIN_SUPPORT(karate, USE_KARATE)
 PLUGIN_SUPPORT(kinet, USE_KINET)
 PLUGIN_SUPPORT(milinst, USE_MILINST)
-PLUGIN_SUPPORT(opendmx, USE_OPENDMX)
+PLUGIN_SUPPORT(nanoleaf, USE_NANOLEAF)
+PLUGIN_SUPPORT(opendmx, USE_OPENDMX, [$have_not_win32])
 PLUGIN_SUPPORT(openpixelcontrol, USE_OPENPIXELCONTROL)
 PLUGIN_SUPPORT(osc, USE_OSC, [$have_liblo])
 PLUGIN_SUPPORT(pathport, USE_PATHPORT)
@@ -695,6 +911,7 @@ PLUGIN_SUPPORT(renard, USE_RENARD)
 PLUGIN_SUPPORT(sandnet, USE_SANDNET)
 PLUGIN_SUPPORT(shownet, USE_SHOWNET)
 PLUGIN_SUPPORT(spi, USE_SPI, [$have_spi])
+PLUGIN_SUPPORT(spidmx, USE_SPIDMX, [$have_spi])
 PLUGIN_SUPPORT(stageprofi, USE_STAGEPROFI)
 PLUGIN_SUPPORT(uartdmx, USE_UART, [$have_uart])
 PLUGIN_SUPPORT(usbdmx, USE_LIBUSB, [$have_libusb])
@@ -735,9 +952,6 @@ AS_IF([test "x$enable_ja_rule" = xyes && test "x$enable_usbdmx" = xno],
       [AC_MSG_ERROR([Ja Rule requires the usbdmx plugin, but it could not be enabled.])])
 AS_IF([test "x$enable_ja_rule" = xyes && test "x$have_libusb" = xno],
       [AC_MSG_ERROR([Ja Rule requires libusb, but it was not found on your system.])])
-AS_IF([test "x$enable_ja_rule" = xyes && test "x$have_libusb_hotplug_api" = xno],
-      [AC_MSG_ERROR([Ja Rule requires libusb to have the hotplug capability (versions 1.0.16 \
-and above), but the version found on your system doesn't appear to have it.])])
 
 AM_CONDITIONAL([BUILD_JA_RULE], [test "x$enable_ja_rule" = xyes])
 
@@ -766,8 +980,9 @@ AC_CONFIG_LINKS([python/ola/PidStore.py:python/ola/PidStore.py
 AC_CONFIG_FILES([include/ola/base/Version.h
                  libola.pc
                  libolaserver.pc
+                 libs/acn/libolaacn.pc
+                 ola.spec
                  plugins/artnet/messages/libolaartnetconf.pc
-                 plugins/e131/e131/libolaacn.pc
                  plugins/e131/messages/libolae131conf.pc
                  plugins/usbpro/messages/libolausbproconf.pc
                  tools/e133/libolae133common.pc
@@ -775,6 +990,7 @@ AC_CONFIG_FILES([include/ola/base/Version.h
                  ])
 # Makefiles
 AC_CONFIG_FILES([Makefile java/Makefile])
+AC_SUBST(AM_LDFLAGS)
 AC_OUTPUT
 
 echo \
@@ -783,7 +999,7 @@ ${PACKAGE_NAME} Version ${PACKAGE_VERSION}
 
 Prefix: '${prefix}'
 Compiler: '${CXX} ${CXXFLAGS} ${CPPFLAGS}'
-Linker: '${LD} ${LDFLAGS} ${LIBS}'
+Linker: '${LD} ${AM_LDFLAGS} ${LIBS}'
 Python: ${PYTHON}
 
 Python API: ${enable_python_libs}
@@ -792,6 +1008,7 @@ Enable HTTP Server: ${have_microhttpd}
 RDM Responder Tests: ${enable_rdm_tests}
 Ja Rule: ${BUILDING_JA_RULE}
 Enabled Plugins:${PLUGINS}
+UUCP Lock Directory: $UUCPLOCK
 
 Now type 'make @<:@<target>@:>@'
   where the optional <target> is:

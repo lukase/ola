@@ -37,6 +37,7 @@ IGNORE_PATTERNS = [
   '*/Makefile',
   '*_pb2.py',
   '*~',
+  '.codespellignore',
   '.git',
   '.git/*',
   '.gitignore',
@@ -54,6 +55,8 @@ IGNORE_PATTERNS = [
   'man/generate-html.sh',
   'ola-*.tar.gz',
   'ola-*/*',
+  'plugins/generate-html.sh',
+  'plugins/pandoc-html-index.html',
   'plugins/kinet/kinet.cpp',
   'python/ola/PidStoreLocation.py',
   'python/ola/Version.py',
@@ -62,6 +65,7 @@ IGNORE_PATTERNS = [
   'tools/rdm/DataLocation.py',
 ]
 
+
 def Usage(arg0):
   print (textwrap.dedent("""\
   Usage: %s <treeA> <treeB>
@@ -69,11 +73,13 @@ def Usage(arg0):
   Check for files that exist in treeA but aren't in treeB. This can be used to
   ensure we don't miss files from the tarball.""" % arg0))
 
+
 def ShouldIgnore(path):
   for pattern in IGNORE_PATTERNS:
     if fnmatch.fnmatch(path, pattern):
       return True
   return False
+
 
 def BuildTree(root):
   tree = set()
@@ -89,6 +95,7 @@ def BuildTree(root):
         tree.add(path)
 
   return tree
+
 
 def main():
   if len(sys.argv) != 3:
@@ -119,6 +126,7 @@ def main():
     sys.exit(1)
 
   sys.exit()
+
 
 if __name__ == '__main__':
   main()

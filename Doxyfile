@@ -255,7 +255,7 @@ EXTENSION_MAPPING      =
 
 # When enabled doxygen tries to link words that correspond to documented classes,
 # or namespaces to their corresponding documentation. Such a link can be
-# prevented in individual cases by by putting a % sign in front of the word or
+# prevented in individual cases by putting a % sign in front of the word or
 # globally by setting AUTOLINK_SUPPORT to NO.
 
 # Commented out due to lack of support on Travis and causing spurious errors
@@ -330,22 +330,6 @@ INLINE_SIMPLE_STRUCTS  = NO
 # types are typedef'ed and only the typedef is referenced, never the tag name.
 
 TYPEDEF_HIDES_STRUCT   = NO
-
-# The SYMBOL_CACHE_SIZE determines the size of the internal cache use to
-# determine which symbols to keep in memory and which to flush to disk.
-# When the cache is full, less often used symbols will be written to disk.
-# For small to medium size projects (<1000 input files) the default value is
-# probably good enough. For larger projects a too small cache size can cause
-# doxygen to be busy swapping symbols to and from disk most of the time
-# causing a significant performance penalty.
-# If the system has enough physical memory increasing the cache will improve the
-# performance by keeping more symbols in memory. Note that the value works on
-# a logarithmic scale so increasing the size by one will roughly double the
-# memory usage. The cache size is given by this formula:
-# 2^(16+SYMBOL_CACHE_SIZE). The valid range is 0..9, the default is 0,
-# corresponding to a cache size of 2^16 = 65536 symbols.
-
-SYMBOL_CACHE_SIZE      = 0
 
 # Similar to the SYMBOL_CACHE_SIZE the size of the symbol lookup cache can be
 # set using LOOKUP_CACHE_SIZE. This cache is used to resolve symbols given
@@ -935,7 +919,7 @@ HTML_STYLESHEET        =
 # user-defined cascading style sheet that is included after the standard
 # style sheets created by doxygen. Using this option one can overrule
 # certain style aspects. This is preferred over using HTML_STYLESHEET
-# since it does not replace the standard style sheet and is therefor more
+# since it does not replace the standard style sheet and is therefore more
 # robust against future updates. Doxygen will copy the style sheet file to
 # the output directory.
 
@@ -1197,7 +1181,7 @@ EXT_LINKS_IN_WINDOW    = NO
 
 FORMULA_FONTSIZE       = 10
 
-# Use the FORMULA_TRANPARENT tag to determine whether or not the images
+# Use the FORMULA_TRANSPARENT tag to determine whether or not the images
 # generated for formulas are transparent PNGs. Transparent PNGs are
 # not supported properly for IE 6.0, but are supported on all modern browsers.
 # Note that when changing this option you need to delete any form_*.png files
@@ -1215,7 +1199,7 @@ FORMULA_TRANSPARENT    = YES
 USE_MATHJAX            = NO
 
 # When MathJax is enabled you can set the default output format to be used for
-# thA MathJax output. Supported types are HTML-CSS, NativeMML (i.e. MathML) and
+# the MathJax output. Supported types are HTML-CSS, NativeMML (i.e. MathML) and
 # SVG. The default value is HTML-CSS, which is slower, but has the best
 # compatibility.
 
@@ -1489,18 +1473,6 @@ GENERATE_XML           = $(GENERATE_XML)
 
 XML_OUTPUT             = xml
 
-# The XML_SCHEMA tag can be used to specify an XML schema,
-# which can be used by a validating XML parser to check the
-# syntax of the XML files.
-
-XML_SCHEMA             =
-
-# The XML_DTD tag can be used to specify an XML DTD,
-# which can be used by a validating XML parser to check the
-# syntax of the XML files.
-
-XML_DTD                =
-
 # If the XML_PROGRAMLISTING tag is set to YES Doxygen will
 # dump the program listings (including syntax highlighting
 # and cross-referencing information) to the XML output. Note that
@@ -1753,7 +1725,7 @@ UML_LOOK               = NO
 # the class node. If there are many fields or methods and many nodes the
 # graph may become too big to be useful. The UML_LIMIT_NUM_FIELDS
 # threshold limits the number of items for each type to make the size more
-# managable. Set this to 0 for no limit. Note that the threshold may be
+# manageable. Set this to 0 for no limit. Note that the threshold may be
 # exceeded by 50% before the limit is enforced.
 
 # Commented out due to lack of support on Travis and causing spurious errors

@@ -508,8 +508,9 @@ void ArtNetNodeTest::testConfigurationMode() {
   OLA_ASSERT_EQ((uint8_t) 2, node.SubnetAddress());
   poll_reply_message[19] = 2;
   poll_reply_message[115] = '4';
-  for (unsigned int i = 186; i <= 193; i++)
+  for (unsigned int i = 186; i <= 193; i++) {
     poll_reply_message[i] = 0x20;
+  }
   ExpectedBroadcast(poll_reply_message, sizeof(poll_reply_message));
   node.ExitConfigurationMode();
   m_socket->Verify();
@@ -689,7 +690,7 @@ void ArtNetNodeTest::testBroadcastSendDMX() {
     OLA_ASSERT_FALSE(node.SendDMX(4, dmx));
   }
 
-  {  // attempt to send an empty fram
+  {  // attempt to send an empty frame
     SocketVerifier verifer(m_socket);
     DmxBuffer empty_buffer;
     OLA_ASSERT(node.SendDMX(m_port_id, empty_buffer));
@@ -697,7 +698,7 @@ void ArtNetNodeTest::testBroadcastSendDMX() {
 }
 
 /**
- * Check sending DMX using broadcast works to ArtNet universe 0.
+ * Check sending DMX using broadcast works to Art-Net universe 0.
  */
 void ArtNetNodeTest::testBroadcastSendDMXZeroUniverse() {
   m_socket->SetDiscardMode(true);

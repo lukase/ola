@@ -20,7 +20,7 @@
 
 #if HAVE_CONFIG_H
 #include <config.h>
-#endif
+#endif  // HAVE_CONFIG_H
 
 #include <errno.h>
 #include <stdio.h>
@@ -30,7 +30,7 @@
 #include <unistd.h>
 #ifdef _WIN32
 #include <Shlobj.h>
-#endif
+#endif  // _WIN32
 #include <string>
 
 #include "ola/ExportMap.h"
@@ -48,7 +48,7 @@
 #include "olad/Preferences.h"
 
 DEFINE_s_string(config_dir, c, "",
-                "The path to the config directory, Defaults to ~/.ola/ " \
+                "The path to the config directory, defaults to ~/.ola/ " \
                 "on *nix and %LOCALAPPDATA%\\.ola\\ on Windows.");
 
 namespace ola {
@@ -185,7 +185,7 @@ string OlaDaemon::DefaultConfigDir() {
     }
 #else
     return "";
-#endif
+#endif  // _WIN32
   }
 }
 
@@ -200,7 +200,7 @@ bool OlaDaemon::InitConfigDir(const string &path) {
     if (mkdir(path.c_str())) {
 #else
     if (mkdir(path.c_str(), 0755)) {
-#endif
+#endif  // _WIN32
       OLA_FATAL << "Couldn't mkdir " << path;
       return false;
     }

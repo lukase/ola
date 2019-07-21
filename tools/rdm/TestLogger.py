@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -30,6 +29,7 @@ __author__ = 'nomis52@gmail.com (Simon Newton)'
 
 class Error(Exception):
   """Base exception class."""
+
 
 class TestLoggerException(Error):
   """Indicates a problem with the log reader."""
@@ -141,9 +141,9 @@ class TestLogger(object):
       The text version of the results.
     """
     test_data = self.ReadLog(uid, timestamp)
-    formatted_output =  self._FormatData(test_data, category, test_state,
-                                         include_debug, include_description,
-                                         include_summary)
+    formatted_output = self._FormatData(test_data, category, test_state,
+                                        include_debug, include_description,
+                                        include_summary)
     return formatted_output
 
   def _CheckFilename(self, filename):
@@ -234,14 +234,16 @@ class TestLogger(object):
       for category, counts in sorted(count_by_category.items()):
         cat_passed = counts['passed']
         cat_total = counts['total']
+        if cat_total == 0:
+          continue
         try:
           percent = int(round(100.0 * cat_passed / cat_total))
         except ZeroDivisionError:
-          percent = '-'
+          percent = ' - '
         results_log.append(' %26s:   %3d / %3d    %s%%' %
                            (category, cat_passed, cat_total, percent))
 
       results_log.append("-------------------------------------------------")
-      results_log.append('%d / %d tests run, %d passed, %d failed, %d broken' % (
-        total - not_run, total, passed, failed, broken))
+      results_log.append('%d / %d tests run, %d passed, %d failed, %d broken' %
+                         (total - not_run, total, passed, failed, broken))
     return '\n'.join(results_log)

@@ -54,7 +54,7 @@
 #include <string>
 #include <vector>
 
-#include "plugins/e131/e131/RDMPDU.h"
+#include "libs/acn/RDMPDU.h"
 
 DEFINE_s_uint16(endpoint, e, 0, "The endpoint to use");
 DEFINE_s_string(target, t, "", "List of IPs to connect to");
@@ -71,7 +71,7 @@ using ola::network::IPV4Address;
 using ola::network::IPV4SocketAddress;
 using ola::network::UDPSocket;
 using ola::acn::E133_PORT;
-using ola::plugin::e131::RDMPDU;
+using ola::acn::RDMPDU;
 using ola::rdm::PidStoreHelper;
 using ola::rdm::RDMCommandSerializer;
 using ola::rdm::RDMRequest;
@@ -399,7 +399,7 @@ void SimpleE133Controller::HandleStatusMessage(
              << " : " << status_message.status_message;
   } else {
     OLA_INFO << "Device returned code " << status_message.status_code << " : "
-             << ola::e133::StatusMessageIdToString(e133_status_code)
+             << ola::e133::StatusCodeToString(e133_status_code)
              << " : " << status_message.status_message;
   }
   Stop();

@@ -24,6 +24,7 @@
 #include <libusb.h>
 #include <memory>
 #include <string>
+#include "libs/usb/LibUsbAdaptor.h"
 #include "ola/DmxBuffer.h"
 #include "ola/base/Macro.h"
 #include "ola/thread/Mutex.h"
@@ -38,16 +39,21 @@ class EuroliteProThreadedSender;
 /**
  * @brief The EurolitePro Widget.
  */
-class EurolitePro : public BaseWidget {
+class EurolitePro : public SimpleWidget {
  public:
   /**
    * @brief Create a new EurolitePro.
    * @param adaptor the LibUsbAdaptor to use.
+   * @param usb_device the libusb_device to use for the widget.
    * @param serial the serial number of the widget.
+   * @param is_mk2 whether the widget is a mk 2 variant.
    */
-  EurolitePro(LibUsbAdaptor *adaptor,
-              const std::string &serial)
-      : BaseWidget(adaptor),
+  EurolitePro(ola::usb::LibUsbAdaptor *adaptor,
+              libusb_device *usb_device,
+              const std::string &serial,
+              bool is_mk2)
+      : SimpleWidget(adaptor, usb_device),
+        m_is_mk2(is_mk2),
         m_serial(serial) {}
 
   /**
@@ -57,6 +63,9 @@ class EurolitePro : public BaseWidget {
   std::string SerialNumber() const {
     return m_serial;
   }
+
+ protected:
+  bool m_is_mk2;
 
  private:
   std::string m_serial;
@@ -75,17 +84,18 @@ class SynchronousEurolitePro: public EurolitePro {
    * @param adaptor the LibUsbAdaptor to use.
    * @param usb_device the libusb_device to use for the widget.
    * @param serial the serial number of the widget.
+   * @param is_mk2 whether the widget is a mk 2 variant.
    */
-  SynchronousEurolitePro(LibUsbAdaptor *adaptor,
+  SynchronousEurolitePro(ola::usb::LibUsbAdaptor *adaptor,
                          libusb_device *usb_device,
-                         const std::string &serial);
+                         const std::string &serial,
+                         bool is_mk2);
 
   bool Init();
 
   bool SendDMX(const DmxBuffer &buffer);
 
  private:
-  libusb_device* const m_usb_device;
   std::auto_ptr<class EuroliteProThreadedSender> m_sender;
 
   DISALLOW_COPY_AND_ASSIGN(SynchronousEurolitePro);
@@ -101,10 +111,12 @@ class AsynchronousEurolitePro: public EurolitePro {
    * @param adaptor the LibUsbAdaptor to use.
    * @param usb_device the libusb_device to use for the widget.
    * @param serial the serial number of the widget.
+   * @param is_mk2 whether the widget is a mk 2 variant.
    */
-  AsynchronousEurolitePro(class LibUsbAdaptor *adaptor,
+  AsynchronousEurolitePro(ola::usb::LibUsbAdaptor *adaptor,
                           libusb_device *usb_device,
-                          const std::string &serial);
+                          const std::string &serial,
+                          bool is_mk2);
 
   bool Init();
 

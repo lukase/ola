@@ -22,8 +22,8 @@
  * @brief The OLA logging system.
  *
  * @examplepara
- * ~~~~~~~~~~~~~~~~~~~~~
- * \#include <ola/Logging.h>
+ * @code
+ * #include <ola/Logging.h>
  *
  * // Call this once
  * ola::InitLogging(ola::OLA_LOG_WARN, ola::OLA_LOG_STDERR);
@@ -32,7 +32,7 @@
  * OLA_WARN << "Could not connect to server: " << ip_address;
  * OLA_INFO << "Reading configs from " << config_dir;
  * OLA_DEBUG << "Counter was " << counter;
- * ~~~~~~~~~~~~~~~~~~~~~
+ * @endcode
  *
  * @addtogroup logging
  * @{
@@ -49,7 +49,9 @@
 #include <sstream>
 
 /**
- * Provide a stream interface to log a message at the specified log level.
+ * @brief Provide a stream interface to log a message at the specified log
+ * level.
+ *
  * Rather than calling this directly use one of the OLA_FATAL, OLA_WARN,
  * OLA_INFO or OLA_DEBUG macros.
  * @param level the log_level to log at.
@@ -206,7 +208,7 @@ class UnixSyslogDestination : public SyslogDestination {
   */
   void Write(log_level level, const std::string &log_line);
 };
-#endif
+#endif  // _WIN32
 
 /**@}*/
 
@@ -254,7 +256,7 @@ void IncrementLogLevel();
 /**
  * @brief Initialize the OLA logging system from flags.
  * @pre ParseFlags() must have been called before calling this.
- * @returns true if logging was initialized sucessfully, false otherwise.
+ * @returns true if logging was initialized successfully, false otherwise.
  */
 bool InitLoggingFromFlags();
 
@@ -262,7 +264,7 @@ bool InitLoggingFromFlags();
  * @brief Initialize the OLA logging system
  * @param level the level to log at
  * @param output the destination for the logs
- * @returns true if logging was initialized sucessfully, false otherwise.
+ * @returns true if logging was initialized successfully, false otherwise.
  */
 bool InitLogging(log_level level, log_output output);
 

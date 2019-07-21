@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
 # License as published by the Free Software Foundation; either
@@ -16,21 +15,21 @@
 # ClientWrapper.py
 # Copyright (C) 2005 Simon Newton
 
-"""A simple client wrapper for the OlaClient."""
-
-__author__ = 'nomis52@gmail.com (Simon Newton)'
-
 import array
 import datetime
 import fcntl
 import heapq
-import logging
 import os
 import select
 import termios
 import threading
 import traceback
+from ola import ola_logger
 from ola.OlaClient import OlaClient
+
+"""A simple client wrapper for the OlaClient."""
+
+__author__ = 'nomis52@gmail.com (Simon Newton)'
 
 
 class _Event(object):
@@ -104,7 +103,7 @@ class SelectServer(object):
     self._function_list_lock.acquire()
     self._functions.append(f)
     # can write anything here, this wakes up the select() call
-    os.write(self._local_socket[1], 'a')
+    os.write(self._local_socket[1], b'a')
     self._function_list_lock.release()
 
   def Terminate(self):
@@ -174,7 +173,7 @@ class SelectServer(object):
       False if the calling thread isn't the one that created the select server.
     """
     if self._ss_thread_id != self._GetThreadID():
-      logging.critical(
+      ola_logger.critical(
          'SelectServer called in a thread other than the owner. '
          'Owner %d, caller %d' % (self._ss_thread_id, self._GetThreadID()))
       traceback.print_stack()

@@ -20,13 +20,13 @@
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>  // Required by FreeBSD, order is important to OpenBSD
-#endif
+#endif  // HAVE_SYS_TYPES_H
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>  // Required by FreeBSD
-#endif
+#endif  // HAVE_SYS_SOCKET_H
 #ifdef HAVE_NET_IF_ARP_H
 #include <net/if_arp.h>
-#endif
+#endif  // HAVE_NET_IF_ARP_H
 
 #include <stdint.h>
 #include <string.h>
@@ -42,7 +42,7 @@
 #include "common/network/WindowsInterfacePicker.h"
 #else
 #include "common/network/PosixInterfacePicker.h"
-#endif
+#endif  // _WIN32
 
 namespace ola {
 
@@ -55,13 +55,13 @@ using std::vector;
 const uint16_t Interface::ARP_VOID_TYPE = ARPHRD_VOID;
 #else
 const uint16_t Interface::ARP_VOID_TYPE = 0xffff;
-#endif
+#endif  // ARPHRD_VOID
 
 #ifdef ARPHRD_ETHER
 const uint16_t Interface::ARP_ETHERNET_TYPE = ARPHRD_ETHER;
 #else
 const uint16_t Interface::ARP_ETHERNET_TYPE = 1;
-#endif
+#endif  // ARPHRD_ETHER
 
 
 Interface::Interface()
@@ -117,13 +117,29 @@ Interface& Interface::operator=(const Interface &other) {
 }
 
 
-bool Interface::operator==(const Interface &other) {
+bool Interface::operator==(const Interface &other) const {
   return (name == other.name &&
           ip_address == other.ip_address &&
+          bcast_address == other.bcast_address &&
           subnet_mask == other.subnet_mask &&
+          hw_address == other.hw_address &&
           loopback == other.loopback &&
           index == other.index &&
           type == other.type);
+}
+
+
+string Interface::ToString(const string &separator) const {
+  std::ostringstream str;
+  str << name << separator
+      << "Index: " << index << separator
+      << "IP: " << ip_address << separator
+      << "Broadcast: " << bcast_address << separator
+      << "Subnet: " << subnet_mask << separator
+      << "Type: " << type << separator
+      << "MAC: " << hw_address << separator
+      << "Loopback: " << loopback;
+  return str.str();
 }
 
 
@@ -228,8 +244,9 @@ Interface InterfaceBuilder::Construct() {
 bool InterfaceBuilder::SetAddress(const string &str,
                                   IPV4Address *target) {
   IPV4Address tmp_address;
-  if (!IPV4Address::FromString(str, &tmp_address))
+  if (!IPV4Address::FromString(str, &tmp_address)) {
     return false;
+  }
   *target = tmp_address;
   return true;
 }

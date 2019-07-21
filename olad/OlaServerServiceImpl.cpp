@@ -693,13 +693,15 @@ void OlaServerServiceImpl::ForceDiscovery(
 
   if (universe) {
     unsigned int universe_id = request->universe();
-    universe->RunRDMDiscovery(
+    m_broker->RunRDMDiscovery(
+        GetClient(controller),
+        universe,
+        request->full(),
         NewSingleCallback(this,
                           &OlaServerServiceImpl::RDMDiscoveryComplete,
                           universe_id,
                           done,
-                          response),
-        request->full());
+                          response));
   } else {
     ClosureRunner runner(done);
     MissingUniverseError(controller);
@@ -731,7 +733,7 @@ void OlaServerServiceImpl::RDMCommand(
     rdm_request = new ola::rdm::RDMSetRequest(
         source_uid,
         destination,
-        0,  // transaction #
+        universe->GetRDMTransactionNumber(),
         1,  // port id
         request->sub_device(),
         request->param_id(),
@@ -742,7 +744,7 @@ void OlaServerServiceImpl::RDMCommand(
     rdm_request = new ola::rdm::RDMGetRequest(
         source_uid,
         destination,
-        0,  // transaction #
+        universe->GetRDMTransactionNumber(),
         1,  // port id
         request->sub_device(),
         request->param_id(),
@@ -785,7 +787,7 @@ void OlaServerServiceImpl::RDMDiscoveryCommand(
   ola::rdm::RDMRequest *rdm_request = new ola::rdm::RDMDiscoveryRequest(
       source_uid,
       destination,
-      0,  // transaction #
+      universe->GetRDMTransactionNumber(),
       1,  // port id
       request->sub_device(),
       request->param_id(),

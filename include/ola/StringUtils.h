@@ -45,7 +45,7 @@ namespace ola {
  *   output vector.
  * @param[in] input the string to split
  * @param[out] tokens pointer to a vector with the parts of the string
- * @param delimiters the delimiiter to use for splitting. Defaults to ' '
+ * @param delimiters the delimiter to use for splitting. Defaults to ' '
  */
 void StringSplit(const std::string &input,
                  std::vector<std::string> *tokens,
@@ -58,7 +58,7 @@ void StringSplit(const std::string &input,
  *   output vector.
  * @param[in] input the string to split
  * @param[out] tokens the parts of the string
- * @param delimiters the delimiiter to use for splitting. Defaults to ' '
+ * @param delimiters the delimiter to use for splitting. Defaults to ' '
  * @deprecated Use the version with a vector pointer instead (3 Jan 2015).
  */
 inline void StringSplit(
@@ -445,6 +445,12 @@ void CapitalizeLabel(std::string *s);
  *   - dmx
  */
 void CustomCapitalizeLabel(std::string *s);
+
+/**
+ * @brief Transform a string by capitalizing the first character.
+ * @param s a string to transform.
+ */
+void CapitalizeFirst(std::string *s);
 
 /**
  * @brief Write binary data to an ostream in a human readable form.

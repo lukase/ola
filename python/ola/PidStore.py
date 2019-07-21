@@ -16,15 +16,9 @@
 # Copyright (C) 2010 Simon Newton
 # Holds all the information about RDM PIDs
 
-"""The PID Store."""
-
 from __future__ import print_function
-
-__author__ = 'nomis52@gmail.com (Simon Newton)'
-
 import binascii
 import math
-import ola.RDMConstants
 import os
 import socket
 import struct
@@ -33,7 +27,12 @@ from google.protobuf import text_format
 from ola import PidStoreLocation
 from ola import Pids_pb2
 from ola.MACAddress import MACAddress
+from ola import RDMConstants
 from ola.UID import UID
+
+"""The PID Store."""
+
+__author__ = 'nomis52@gmail.com (Simon Newton)'
 
 
 # Various sub device enums
@@ -54,7 +53,7 @@ class InvalidPidFormat(Error):
 
 
 class PidStructureException(Error):
-  """Raised if the PID structure isn't vaild."""
+  """Raised if the PID structure isn't valid."""
 
 
 class ArgsValidationError(Error):
@@ -62,7 +61,11 @@ class ArgsValidationError(Error):
 
 
 class UnpackException(Error):
-  """Raised if we can't unpack the data corectly."""
+  """Raised if we can't unpack the data correctly."""
+
+
+class MissingPLASAPIDs(Error):
+  """Raises if the files did not contain the ESTA (PLASA) PIDs."""
 
 
 class Pid(object):
@@ -227,6 +230,10 @@ class Atom(object):
   def GetDescription(self, indent=0):
     return str(self)
 
+  @staticmethod
+  def HasRanges():
+    return False
+
 
 class FixedSizeAtom(Atom):
   def __init__(self, name, format_char):
@@ -334,6 +341,12 @@ class IntAtom(FixedSizeAtom):
     if not self._ranges:
       self._ranges.append(Range(0, max_value))
 
+  def ValidateRawValueInRange(self, value):
+    for valid_range in self._ranges:
+      if valid_range.Matches(value):
+        return True
+    return False
+
   def Pack(self, args):
     self.CheckForSingleArg(args)
     arg = args[0]
@@ -345,8 +358,8 @@ class IntAtom(FixedSizeAtom):
     if value is None:
       value = self._AccountForMultiplierPack(args[0])
 
-    for range in self._ranges:
-      if range.Matches(value):
+    for valid_range in self._ranges:
+      if valid_range.Matches(value):
         break
     else:
       raise ArgsValidationError('Param %d out of range, must be one of %s' %
@@ -382,16 +395,19 @@ class IntAtom(FixedSizeAtom):
     """
     return self._AccountForMultiplierPack(value)
 
+  def HasRanges(self):
+    return (len(self._ranges) > 0)
+
   def _GetAllowedRanges(self):
     values = list(self._labels.keys())
 
-    for range in self._ranges:
-      if range.min == range.max:
-        values.append(str(self._AccountForMultiplierUnpack(range.min)))
+    for valid_range in self._ranges:
+      if valid_range.min == valid_range.max:
+        values.append(str(self._AccountForMultiplierUnpack(valid_range.min)))
       else:
         values.append('[%s, %s]' %
-                      (self._AccountForMultiplierUnpack(range.min),
-                       self._AccountForMultiplierUnpack(range.max)))
+                      (self._AccountForMultiplierUnpack(valid_range.min),
+                       self._AccountForMultiplierUnpack(valid_range.max)))
 
     return ('%s' % ', '.join(values))
 
@@ -675,7 +691,7 @@ class Group(Atom):
       For now we support the following cases:
        - Fixed size group. This is easy to unpack
        - Groups of variable size. We enforce two conditions for these, i) the
-         variable sized field MUST be the last one ii) Only a single occurance
+         variable sized field MUST be the last one ii) Only a single occurrence
          is allowed. This means you can't do things like:
 
            [(string, int)]   # variable sized types must be last
@@ -694,8 +710,9 @@ class Group(Atom):
         variable_sized_atoms.append(atom)
 
     if len(variable_sized_atoms) > 1:
-      raise PidStore('More than one variable size field in %s: %s' % (
-        self.name, variable_sized_atoms))
+      raise PidStructureException(
+        'More than one variable size field in %s: %s' %
+        (self.name, variable_sized_atoms))
 
     if not variable_sized_atoms:
       # The group is of a fixed size, this means we don't care how many times
@@ -816,19 +833,19 @@ class Group(Atom):
       # groups of fixed length data
       if data_size % self._group_size:
         raise UnpackException(
-            'Data size issue for %s, data size %d, group size %d' %
-            (self.name, data_size, self._group_size))
+            'Data size issue for %s (%s), data size %d, "%s" group size %d' %
+            (self.name, self.__str__, data_size, data, self._group_size))
 
       group_count = data_size / self._group_size
       if self.max is not None and group_count > self.max:
         raise UnpackException(
-            'Too many repeated group_count for %s, limit is %d, found %d' %
-            (self.name, self.max, group_count))
+            'Too many repeated group_count for %s (%s), limit is %d, found %d' %
+            (self.name, self.__str__, self.max, group_count))
 
       if self.max is not None and group_count < self.min:
         raise UnpackException(
-            'Too few repeated group_count for %s, limit is %d, found %d' %
-            (self.name, self.min, group_count))
+            'Too few repeated group_count for %s (%s), limit is %d, found %d' %
+            (self.name, self.__str__, self.min, group_count))
 
       offset = 0
       groups = []
@@ -948,12 +965,12 @@ class PidStore(object):
 
     for pid_pb in self._pid_store.pid:
       if validate:
-        if ((pid_pb.value >= ola.RDMConstants.RDM_MANUFACTURER_PID_MIN) and
-            (pid_pb.value <= ola.RDMConstants.RDM_MANUFACTURER_PID_MAX)):
+        if ((pid_pb.value >= RDMConstants.RDM_MANUFACTURER_PID_MIN) and
+            (pid_pb.value <= RDMConstants.RDM_MANUFACTURER_PID_MAX)):
           raise InvalidPidFormat('%0x04hx between %0x04hx and %0x04hx in %s' %
                                  (pid_pb.value,
-                                  ola.RDMConstants.RDM_MANUFACTURER_PID_MIN,
-                                  ola.RDMConstants.RDM_MANUFACTURER_PID_MAX,
+                                  RDMConstants.RDM_MANUFACTURER_PID_MIN,
+                                  RDMConstants.RDM_MANUFACTURER_PID_MAX,
                                   pid_file_name))
         if pid_pb.value in self._pids:
           raise InvalidPidFormat('0x%04hx listed more than once in %s' %
@@ -979,13 +996,13 @@ class PidStore(object):
 
       for pid_pb in manufacturer.pid:
         if validate:
-          if ((pid_pb.value < ola.RDMConstants.RDM_MANUFACTURER_PID_MIN) or
-              (pid_pb.value > ola.RDMConstants.RDM_MANUFACTURER_PID_MAX)):
+          if ((pid_pb.value < RDMConstants.RDM_MANUFACTURER_PID_MIN) or
+              (pid_pb.value > RDMConstants.RDM_MANUFACTURER_PID_MAX)):
             raise InvalidPidFormat(
               'Manufacturer pid 0x%04hx not between %0x04hx and %0x04hx' %
               (pid_pb.value,
-               ola.RDMConstants.RDM_MANUFACTURER_PID_MIN,
-               ola.RDMConstants.RDM_MANUFACTURER_PID_MAX))
+               RDMConstants.RDM_MANUFACTURER_PID_MIN,
+               RDMConstants.RDM_MANUFACTURER_PID_MAX))
           if pid_pb.value in pid_dict:
             raise InvalidPidFormat(
                 '0x%04hx listed more than once for 0x%04hx in %s' % (
@@ -1062,10 +1079,21 @@ class PidStore(object):
     Returns:
       The value for this PID, or None if it wasn't found.
     """
-    pid = self.GetName(pid_name)
+    pid = self.GetName(pid_name, esta_id)
     if pid:
       return pid.value
     return pid
+
+  def ManufacturerIdToName(self, esta_id):
+    """A helper method to convert a manufacturer ID to a name
+
+    Args:
+      esta_id: The 2-byte esta / manufacturer ID.
+
+    Returns:
+      The name of the manufacturer, or None if it wasn't found.
+    """
+    return self._manufacturer_id_to_name.get(esta_id, None)
 
   def _PidProtoToObject(self, pid_pb):
     """Convert the protobuf representation of a PID to a PID object.
@@ -1215,4 +1243,16 @@ def GetStore(location=None, only_files=()):
         continue
       pid_files.append(os.path.join(location, file_name))
     _pid_store.Load(pid_files)
+
+  REQUIRED_PIDS = [
+      'DEVICE_INFO',
+      'QUEUED_MESSAGE',
+      'SUPPORTED_PARAMETERS'
+  ]
+  for pid in REQUIRED_PIDS:
+    if not _pid_store.GetName(pid):
+      raise MissingPLASAPIDs(
+          'Could not find %s in PID datastore, check the directory contains '
+          'the ESTA (PLASA) PIDs.' % pid)
+
   return _pid_store

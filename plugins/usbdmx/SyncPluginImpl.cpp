@@ -36,11 +36,20 @@
 
 #include "plugins/usbdmx/AnymauDMX.h"
 #include "plugins/usbdmx/AnymauDMXFactory.h"
+#include "plugins/usbdmx/AVLdiyD512.h"
+#include "plugins/usbdmx/AVLdiyD512Factory.h"
+#include "plugins/usbdmx/DMXCProjectsNodleU1.h"
+#include "plugins/usbdmx/DMXCProjectsNodleU1Device.h"
+#include "plugins/usbdmx/DMXCProjectsNodleU1Factory.h"
+#include "plugins/usbdmx/DMXCreator512Basic.h"
+#include "plugins/usbdmx/DMXCreator512BasicFactory.h"
 #include "plugins/usbdmx/EurolitePro.h"
 #include "plugins/usbdmx/EuroliteProFactory.h"
 #include "plugins/usbdmx/ScanlimeFadecandy.h"
 #include "plugins/usbdmx/ScanlimeFadecandyFactory.h"
 #include "plugins/usbdmx/GenericDevice.h"
+#include "plugins/usbdmx/ShowJockeyDMXU1.h"
+#include "plugins/usbdmx/ShowJockeyDMXU1Factory.h"
 #include "plugins/usbdmx/Sunlite.h"
 #include "plugins/usbdmx/SunliteFactory.h"
 #include "plugins/usbdmx/VellemanK8062.h"
@@ -56,14 +65,22 @@ using std::vector;
 
 SyncPluginImpl::SyncPluginImpl(PluginAdaptor *plugin_adaptor,
                                Plugin *plugin,
-                               unsigned int debug_level)
+                               unsigned int debug_level,
+                               Preferences *preferences)
     : m_plugin_adaptor(plugin_adaptor),
       m_plugin(plugin),
       m_debug_level(debug_level),
+      m_preferences(preferences),
       m_context(NULL) {
   m_widget_factories.push_back(new AnymauDMXFactory(&m_usb_adaptor));
-  m_widget_factories.push_back(new EuroliteProFactory(&m_usb_adaptor));
+  m_widget_factories.push_back(new AVLdiyD512Factory(&m_usb_adaptor));
+  m_widget_factories.push_back(new DMXCProjectsNodleU1Factory(&m_usb_adaptor,
+      m_plugin_adaptor, m_preferences));
+  m_widget_factories.push_back(new DMXCreator512BasicFactory(&m_usb_adaptor));
+  m_widget_factories.push_back(new EuroliteProFactory(&m_usb_adaptor,
+      m_preferences));
   m_widget_factories.push_back(new ScanlimeFadecandyFactory(&m_usb_adaptor));
+  m_widget_factories.push_back(new ShowJockeyDMXU1Factory(&m_usb_adaptor));
   m_widget_factories.push_back(new SunliteFactory(&m_usb_adaptor));
   m_widget_factories.push_back(new VellemanK8062Factory(&m_usb_adaptor));
 }
@@ -79,7 +96,11 @@ bool SyncPluginImpl::Start() {
   }
 
   OLA_DEBUG << "libusb debug level set to " << m_debug_level;
+#ifdef HAVE_LIBUSB_SET_OPTION
+  libusb_set_option(m_context, LIBUSB_OPTION_LOG_LEVEL, m_debug_level);
+#else
   libusb_set_debug(m_context, m_debug_level);
+#endif  // HAVE_LIBUSB_SET_OPTION
 
   unsigned int devices_claimed = ScanForDevices();
   if (devices_claimed != m_devices.size()) {
@@ -116,6 +137,30 @@ bool SyncPluginImpl::NewWidget(AnymauDMX *widget) {
                         "anyma-" + widget->SerialNumber()));
 }
 
+bool SyncPluginImpl::NewWidget(AVLdiyD512 *widget) {
+  return StartAndRegisterDevice(
+      widget,
+      new GenericDevice(m_plugin, widget, "AVLdiy USB Device",
+                        "avldiy-" + widget->SerialNumber()));
+}
+
+bool SyncPluginImpl::NewWidget(DMXCProjectsNodleU1 *widget) {
+  return StartAndRegisterDevice(
+      widget,
+      new DMXCProjectsNodleU1Device(
+          m_plugin, widget,
+          "DMXControl Projects e.V. Nodle U1 (" + widget->SerialNumber() + ")",
+          "nodleu1-" + widget->SerialNumber(),
+          m_plugin_adaptor));
+}
+
+bool SyncPluginImpl::NewWidget(DMXCreator512Basic *widget) {
+  return StartAndRegisterDevice(
+      widget,
+      new GenericDevice(m_plugin, widget, "DMXCreator 512 Basic USB Device",
+                        "dmxcreator512basic-" + widget->SerialNumber()));
+}
+
 bool SyncPluginImpl::NewWidget(EurolitePro *widget) {
   return StartAndRegisterDevice(
       widget,
@@ -123,8 +168,8 @@ bool SyncPluginImpl::NewWidget(EurolitePro *widget) {
                         "eurolite-" + widget->SerialNumber()));
 }
 
-bool SyncPluginImpl::NewWidget(OLA_UNUSED class JaRuleWidget *widget) {
-  // This should never happen since there is no Syncronous support for Ja Rule.
+bool SyncPluginImpl::NewWidget(OLA_UNUSED ola::usb::JaRuleWidget *widget) {
+  // This should never happen since there is no Synchronous support for Ja Rule.
   OLA_WARN << "::NewWidget called for a JaRuleWidget";
   return false;
 }
@@ -136,6 +181,15 @@ bool SyncPluginImpl::NewWidget(ScanlimeFadecandy *widget) {
           m_plugin, widget,
           "Fadecandy USB Device (" + widget->SerialNumber() + ")",
           "fadecandy-" + widget->SerialNumber()));
+}
+
+bool SyncPluginImpl::NewWidget(ShowJockeyDMXU1 *widget) {
+  return StartAndRegisterDevice(
+      widget,
+      new GenericDevice(
+          m_plugin, widget,
+          "ShowJockey-DMX-U1 Device (" + widget->SerialNumber() + ")",
+          "showjockey-dmx-u1-" + widget->SerialNumber()));
 }
 
 bool SyncPluginImpl::NewWidget(Sunlite *widget) {
@@ -201,7 +255,8 @@ void SyncPluginImpl::ReScanForDevices() {
  * @param widget The widget that was added.
  * @param device The new olad device that uses this new widget.
  */
-bool SyncPluginImpl::StartAndRegisterDevice(Widget *widget, Device *device) {
+bool SyncPluginImpl::StartAndRegisterDevice(WidgetInterface *widget,
+                                            Device *device) {
   if (!device->Start()) {
     delete device;
     return false;

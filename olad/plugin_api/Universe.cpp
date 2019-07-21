@@ -96,7 +96,8 @@ Universe::Universe(unsigned int universe_id, UniverseStore *store,
       m_export_map(export_map),
       m_clock(clock),
       m_rdm_discovery_interval(),
-      m_last_discovery_time() {
+      m_last_discovery_time(),
+      m_transaction_number_sequence() {
   ostringstream universe_id_str, universe_name_str;
   universe_id_str << universe_id;
   m_universe_id_str = universe_id_str.str();
@@ -607,6 +608,12 @@ unsigned int Universe::UIDCount() const {
   return m_output_uids.size();
 }
 
+/**
+ * Return the RDM transaction number to use
+ */
+uint8_t Universe::GetRDMTransactionNumber() {
+  return m_transaction_number_sequence.Next();
+}
 
 /*
  * Return true if this universe is in use (has at least one port or client).
@@ -690,7 +697,7 @@ void Universe::HTPMergeSources(const vector<DmxSource> &sources) {
 /*
  * Merge all port/client sources.
  * This does a priority based merge as documented at:
- * http://opendmx.net/index.php/OLA_Merging_Algorithms
+ * https://wiki.openlighting.org/index.php/OLA_Merging_Algorithms
  * @param port the input port that changed or NULL
  * @param client the client that changed or NULL
  * @returns true if the data for this universe changed, false otherwise

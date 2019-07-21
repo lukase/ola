@@ -24,7 +24,7 @@
 /**
  * @defgroup sysexit System Exit Values
  * @brief Exit codes
- * @details Some platforms (android) don't provide sysexits.h. To work around
+ * @details Some platforms (Android) don't provide sysexits.h. To work around
  * this we define our own exit codes, which use the system values if provided
  * or otherwise our default values.
  */
@@ -59,7 +59,7 @@ extern const int EXIT_OSERR; /**< @brief system error (e.g can't fork)*/
 extern const int EXIT_OSFILE; /**< @brief critical OS file missing*/
 extern const int EXIT_CANTCREAT; /**< @brief can't create (user) output file*/
 extern const int EXIT_IOERR; /**< @brief input/output error*/
-extern const int EXIT_TEMPFAIL; /**< @brief temp faliure; user can rety*/
+extern const int EXIT_TEMPFAIL; /**< @brief temp failure; user can rety*/
 extern const int EXIT_PROTOCOL; /**< @brief remote error in protocol*/
 extern const int EXIT_NOPERM; /**< @brief permission denied*/
 extern const int EXIT_CONFIG; /**< @brief configuration error*/

@@ -15,15 +15,15 @@
 # StreamRpcChannel.py
 # Copyright (C) 2005 Simon Newton
 
+import struct
+from google.protobuf import service
+from ola import ola_logger
+from ola.rpc import Rpc_pb2
+from ola.rpc.SimpleRpcController import SimpleRpcController
+
 """A RpcChannel that works over a TCP socket."""
 
 __author__ = 'nomis52@gmail.com (Simon Newton)'
-
-import logging
-import struct
-from google.protobuf import service
-from ola.rpc import Rpc_pb2
-from ola.rpc.SimpleRpcController import SimpleRpcController
 
 
 class OutstandingRequest(object):
@@ -50,7 +50,7 @@ class StreamRpcChannel(service.RpcChannel):
   SIZE_MASK = 0x0fffffff
   RECEIVE_BUFFER_SIZE = 8192
 
-  def __init__(self, socket, service_impl, close_callback = None):
+  def __init__(self, socket, service_impl, close_callback=None):
     """Create a new StreamRpcChannel.
 
     Args:
@@ -62,9 +62,9 @@ class StreamRpcChannel(service.RpcChannel):
     self._sequence = 0
     self._outstanding_requests = {}
     self._outstanding_responses = {}
-    self._buffer = [] # the received data
-    self._expected_size = None # the size of the message we're receiving
-    self._skip_message = False # skip the current message
+    self._buffer = []  # The received data
+    self._expected_size = None  # The size of the message we're receiving
+    self._skip_message = False  # Skip the current message
     self._close_callback = close_callback
 
   def SocketReady(self):
@@ -74,8 +74,8 @@ class StreamRpcChannel(service.RpcChannel):
       True if the socket remains connected, False if it was closed.
     """
     data = self._socket.recv(self.RECEIVE_BUFFER_SIZE)
-    if data == '':
-      logging.info('OLAD Server Socket closed')
+    if not data:
+      ola_logger.info('OLAD Server Socket closed')
       if self._close_callback is not None:
         self._close_callback()
       return False
@@ -107,7 +107,7 @@ class StreamRpcChannel(service.RpcChannel):
     if message.id in self._outstanding_responses:
       # fail any outstanding response with the same id, not the best approach
       # but it'll do for now.
-      logging.warning('Response %d already pending, failing now', message.id)
+      ola_logger.warning('Response %d already pending, failing now', message.id)
       response = self._outstanding_responses[message.id]
       response.controller.SetFailed('Duplicate request found')
       self._InvokeCallback(response)
@@ -173,12 +173,12 @@ class StreamRpcChannel(service.RpcChannel):
 
     sent_bytes = self._socket.send(data)
     if sent_bytes != len(data):
-      logging.warning('Failed to send full datagram')
+      ola_logger.warning('Failed to send full datagram')
       return False
     return True
 
   def _SendRequestFailed(self, request):
-    """Send a response indiciating this request failed.
+    """Send a response indicating this request failed.
 
     Args:
       request: An OutstandingRequest object.
@@ -240,12 +240,12 @@ class StreamRpcChannel(service.RpcChannel):
         if not raw_header:
           # not enough data yet
           return
-        header = struct.unpack('<L', raw_header)[0]
+        header = struct.unpack('=L', raw_header)[0]
         version, size = self._DecodeHeader(header)
 
         if version != self.PROTOCOL_VERSION:
-          logging.warning('Protocol mismatch: %d != %d', version,
-              self.PROTOCOL_VERSION)
+          ola_logger.warning('Protocol mismatch: %d != %d', version,
+                             self.PROTOCOL_VERSION)
           self._skip_message = True
         self._expected_size = size
 
@@ -271,7 +271,7 @@ class StreamRpcChannel(service.RpcChannel):
     if message.type in self.MESSAGE_HANDLERS:
       self.MESSAGE_HANDLERS[message.type](self, message)
     else:
-      logging.warning('Not sure of message type %d', message.type())
+      ola_logger.warning('Not sure of message type %d', message.type())
 
   def _HandleRequest(self, message):
     """Handle a Request message.
@@ -280,13 +280,13 @@ class StreamRpcChannel(service.RpcChannel):
       message: The RpcMessage object.
     """
     if not self._service:
-      logging.warning('No service registered')
+      ola_logger.warning('No service registered')
       return
 
     descriptor = self._service.GetDescriptor()
     method = descriptor.FindMethodByName(message.name)
     if not method:
-      logging.warning('Failed to get method descriptor for %s', message.name)
+      ola_logger.warning('Failed to get method descriptor for %s', message.name)
       self._SendNotImplemented(message.id)
       return
 
@@ -296,13 +296,12 @@ class StreamRpcChannel(service.RpcChannel):
     request = OutstandingRequest(message.id, controller)
 
     if message.id in self._outstanding_requests:
-      logging.warning('Duplicate request for %d', message.id)
+      ola_logger.warning('Duplicate request for %d', message.id)
       self._SendRequestFailed(message.id)
 
     self._outstanding_requests[message.id] = request
-    callback = lambda x: self.RequestComplete(request, x)
-    self._service.CallMethod(method, request.controller, request_pb, callback)
-
+    self._service.CallMethod(method, request.controller, request_pb,
+                             lambda x: self.RequestComplete(request, x))
 
   def _HandleResponse(self, message):
     """Handle a Response message.
@@ -322,7 +321,7 @@ class StreamRpcChannel(service.RpcChannel):
     Args:
       message: The RpcMessage object.
     """
-    logging.warning('Received a canceled response')
+    ola_logger.warning('Received a canceled response')
     response = self._outstanding_responses.get(message.id, None)
     if response:
       response.controller.SetFailed(message.buffer)
@@ -345,7 +344,7 @@ class StreamRpcChannel(service.RpcChannel):
     Args:
       message: The RpcMessage object.
     """
-    logging.warning('Received a non-implemented response')
+    ola_logger.warning('Received a non-implemented response')
     response = self._outstanding_responses.get(message.id, None)
     if response:
       response.controller.SetFailed('Not Implemented')

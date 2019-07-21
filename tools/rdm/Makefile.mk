@@ -9,6 +9,7 @@ module_files = \
     tools/rdm/TestLogger.py \
     tools/rdm/TestMixins.py \
     tools/rdm/TestRunner.py \
+    tools/rdm/TimingStats.py \
     tools/rdm/TestState.py \
     tools/rdm/__init__.py
 
@@ -80,6 +81,8 @@ dist_rdmtestsexec_SCRIPTS = \
     tools/rdm/rdm_model_collector.py \
     tools/rdm/rdm_responder_test.py \
     tools/rdm/rdm_test_server.py
+
+dist_noinst_SCRIPTS += tools/rdm/list_rdm_tests.py
 
 # Data files for the RDM Test Server
 tools_rdm_testserver_staticdir = $(datadir)/ola/rdm-server

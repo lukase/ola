@@ -19,7 +19,7 @@
 
 #if HAVE_CONFIG_H
 #include <config.h>
-#endif
+#endif  // HAVE_CONFIG_H
 
 #include <algorithm>
 #include <iostream>
@@ -180,6 +180,9 @@ const ResponderOps<AdvancedDimmerResponder>::ParamHandler
   { PID_IDENTIFY_DEVICE,
     &AdvancedDimmerResponder::GetIdentify,
     &AdvancedDimmerResponder::SetIdentify},
+  { PID_IDENTIFY_MODE,
+    &AdvancedDimmerResponder::GetIdentifyMode,
+    &AdvancedDimmerResponder::SetIdentifyMode},
   { PID_CAPTURE_PRESET,
     NULL,
     &AdvancedDimmerResponder::SetCapturePreset},

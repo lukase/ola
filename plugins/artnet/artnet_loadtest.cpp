@@ -14,7 +14,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * artnet_loadtest.cpp
- * A simple ArtNet load tester
+ * A simple Art-Net load tester
  * Copyright (C) 2013 Simon Newton
  */
 
@@ -48,7 +48,7 @@ DEFINE_s_uint16(universes, u, 1, "Number of universes to send");
 DEFINE_string(iface, "", "The interface to send from");
 
 /**
- * Send N DMX frames using ArtNet, where N is given by number_of_universes.
+ * Send N DMX frames using Art-Net, where N is given by number_of_universes.
  */
 bool SendFrames(ArtNetNode *node, DmxBuffer *buffer,
                 uint16_t number_of_universes) {
@@ -61,8 +61,9 @@ bool SendFrames(ArtNetNode *node, DmxBuffer *buffer,
 int main(int argc, char* argv[]) {
   ola::AppInit(&argc, argv, "", "Run the E1.31 load test.");
 
-  if (FLAGS_universes == 0 || FLAGS_fps == 0)
+  if (FLAGS_universes == 0 || FLAGS_fps == 0) {
     return -1;
+  }
 
   unsigned int fps = min(1000u, static_cast<unsigned int>(FLAGS_fps));
   uint16_t universes = FLAGS_universes;
@@ -91,8 +92,9 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  if (!node.Start())
+  if (!node.Start()) {
     return -1;
+  }
 
   ss.RegisterRepeatingTimeout(
       1000 / fps,

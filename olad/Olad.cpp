@@ -22,7 +22,7 @@
 
 #if HAVE_CONFIG_H
 #include <config.h>
-#endif
+#endif  // HAVE_CONFIG_H
 
 #include <signal.h>
 #include <stdio.h>
@@ -32,6 +32,10 @@
 #include <iostream>
 #include <memory>
 
+// On MinGW, OlaDaemon.h pulls in SocketAddress.h which pulls in WinSock2.h,
+// which needs to be after WinSock2.h, hence this order
+#include "olad/OlaDaemon.h"
+
 #include "ola/Logging.h"
 #include "ola/base/Credentials.h"
 #include "ola/base/Flags.h"
@@ -39,7 +43,6 @@
 #include "ola/base/SysExits.h"
 #include "ola/base/Version.h"
 #include "ola/thread/SignalThread.h"
-#include "olad/OlaDaemon.h"
 
 using ola::OlaDaemon;
 using ola::thread::SignalThread;
@@ -49,16 +52,17 @@ using std::endl;
 DEFINE_default_bool(http, true, "Disable the HTTP server.");
 DEFINE_default_bool(http_quit, true, "Disable the HTTP /quit handler.");
 #ifndef _WIN32
-DEFINE_s_default_bool(daemon, f, false, "Fork and run in the background.");
-#endif
+DEFINE_s_default_bool(daemon, f, false,
+                      "Fork and run as a background process.");
+#endif  // _WIN32
 DEFINE_s_string(http_data_dir, d, "", "The path to the static www content.");
 DEFINE_s_string(interface, i, "",
-                "The interface name (e.g. eth0) or IP of the network interface "
-                "to use.");
+                "The interface name (e.g. eth0) or IP address of the network "
+                "interface to use for the web server.");
 DEFINE_string(pid_location, "",
               "The directory containing the PID definitions.");
 DEFINE_s_uint16(http_port, p, ola::OlaServer::DEFAULT_HTTP_PORT,
-                "The port to run the http server on. Defaults to 9090.");
+                "The port to run the HTTP server on. Defaults to 9090.");
 
 /**
  * This is called by the SelectServer loop to start up the SignalThread. If the
@@ -100,12 +104,12 @@ int main(int argc, char *argv[]) {
     OLA_FATAL << "Attempting to run as root, aborting.";
     return ola::EXIT_UNAVAILABLE;
   }
-  #endif
+  #endif  // OLAD_SKIP_ROOT_CHECK
 
 #ifndef _WIN32
   if (FLAGS_daemon)
     ola::Daemonise();
-#endif
+#endif  // _WIN32
 
   ola::ExportMap export_map;
   if (!ola::ServerInit(original_argc, original_argv, &export_map)) {
@@ -123,7 +127,7 @@ int main(int argc, char *argv[]) {
   signal_thread.InstallSignalHandler(SIGHUP, NULL);
   signal_thread.InstallSignalHandler(
       SIGUSR1, ola::NewCallback(&ola::IncrementLogLevel));
-#endif
+#endif  // _WIN32
 
   ola::OlaServer::Options options;
   options.http_enable = FLAGS_http;
@@ -166,7 +170,7 @@ int main(int argc, char *argv[]) {
   signal_thread.InstallSignalHandler(
       SIGHUP,
       ola::NewCallback(olad->GetOlaServer(), &ola::OlaServer::ReloadPlugins));
-#endif
+#endif  // _WIN32
 
   olad->Run();
   return ola::EXIT_OK;

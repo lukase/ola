@@ -23,9 +23,14 @@
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
-#endif
+#endif  // HAVE_CONFIG_H
 
+#ifdef HAVE_CURSES_H
 #include <curses.h>
+#elif defined(HAVE_NCURSES_CURSES_H)
+#include <ncurses/curses.h>
+#endif  // HAVE_CURSES_H
+
 #include <errno.h>
 #include <getopt.h>
 #include <signal.h>
@@ -37,7 +42,7 @@
 #include <sys/time.h>
 #ifdef HAVE_FTIME
 #include <sys/timeb.h>
-#endif
+#endif  // HAVE_FTIME
 #include <termios.h>
 #include <time.h>
 #include <math.h>
@@ -143,8 +148,8 @@ uint64_t timeGetTime() {
           static_cast<uint64_t>(t.millitm);
 # else
 
-# endif
-#endif
+# endif  // HAVE_FTIME
+#endif  // HAVE_GETTIMEOFDAY
 }
 
 
@@ -171,7 +176,7 @@ void mask() {
 
   /* clear headline */
   (void) attrset(palette[HEADLINE]);
-  move(0, 0);
+  move(0, 0);  // NOLINT(build/include_what_you_use) This is ncurses.h's move
   for (x = 0; x < COLS; x++)
     addch(' ');
 
@@ -180,7 +185,7 @@ void mask() {
   for (y = 1;
        y < LINES && z < ola::DMX_UNIVERSE_SIZE && i < channels_per_screen;
        y += ROWS_PER_CHANNEL_ROW) {
-    move(y, 0);
+    move(y, 0);  // NOLINT(build/include_what_you_use) This is ncurses.h's move
     for (x = 0;
          x < channels_per_line &&
          z < ola::DMX_UNIVERSE_SIZE &&
@@ -273,7 +278,7 @@ void values() {
   for (y = ROWS_PER_CHANNEL_ROW;
        y < LINES && z < ola::DMX_UNIVERSE_SIZE && i < channels_per_screen;
        y += ROWS_PER_CHANNEL_ROW) {
-    move(y, 0);
+    move(y, 0);  // NOLINT(build/include_what_you_use) This is ncurses.h's move
     for (x = 0;
          x < channels_per_line &&
          z < ola::DMX_UNIVERSE_SIZE &&
@@ -446,6 +451,7 @@ void changepalette(int p) {
     default:
       palette_number = 0;
       // fall through, use 0 as default palette
+      OLA_FALLTHROUGH
     case 0:
       init_pair(CHANNEL, COLOR_BLACK, COLOR_CYAN);
       init_pair(ZERO, COLOR_BLACK, COLOR_WHITE);
